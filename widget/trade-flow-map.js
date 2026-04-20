@@ -16,12 +16,14 @@
 
   var WIDGET_ID = "trade-flow-globe";
 
+  // Image URLs: override via window.TradeFlowGlobeImageBase for local/offline use.
+  var IMG_BASE = (global.TradeFlowGlobeImageBase || "https://unpkg.com/three-globe@2.31.0/example/img").replace(/\/$/, "");
   var GLOBE_IMAGES = {
-    night: "https://unpkg.com/three-globe@2.31.0/example/img/earth-night.jpg",
-    day:   "https://unpkg.com/three-globe@2.31.0/example/img/earth-day.jpg",
-    topo:  "https://unpkg.com/three-globe@2.31.0/example/img/earth-topology.png"
+    night: IMG_BASE + "/earth-night.jpg",
+    day:   IMG_BASE + "/earth-day.jpg",
+    topo:  IMG_BASE + "/earth-topology.png"
   };
-  var BG_IMAGE = "https://unpkg.com/three-globe@2.31.0/example/img/night-sky.png";
+  var BG_IMAGE = IMG_BASE + "/night-sky.png";
 
   // -------- Helpers --------
   function toKey(v) { return (v == null ? "" : String(v)).trim().toUpperCase(); }
