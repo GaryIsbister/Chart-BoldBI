@@ -90,6 +90,7 @@
     ["LY", "LBY", "Libya", 26.34, 17.23],
     ["MA", "MAR", "Morocco", 31.79, -7.09],
     ["MG", "MDG", "Madagascar", -18.77, 46.87],
+    ["MW", "MWI", "Malawi", -13.25, 34.30],
     ["ML", "MLI", "Mali", 17.57, -3.99],
     ["MM", "MMR", "Myanmar", 21.91, 95.96],
     ["MN", "MNG", "Mongolia", 46.86, 103.85],
