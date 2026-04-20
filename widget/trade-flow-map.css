@@ -1,0 +1,150 @@
+.trade-flow-globe-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  background: #000010;
+  border-radius: 6px;
+}
+
+.trade-flow-globe-container .tfg-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.trade-flow-globe-container .tfg-error {
+  padding: 20px;
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Category icons drawn as HTML markers on the globe surface */
+.tfg-icon {
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  margin-top: -14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  border: 1.5px solid currentColor;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.tfg-icon:hover {
+  transform: scale(1.25);
+  z-index: 10;
+}
+
+.tfg-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Arc tooltip (rendered by globe.gl via arcLabel()) */
+.tfg-tt {
+  min-width: 170px;
+  padding: 8px 10px;
+  background: rgba(12, 18, 28, 0.92);
+  color: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.tfg-tt-route {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tfg-tt-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.tfg-tt-cat {
+  font-size: 11px;
+  opacity: 0.75;
+  margin: 2px 0 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tfg-tt-line { margin-top: 1px; }
+.tfg-tt-line b { font-weight: 600; opacity: 0.85; }
+
+.tfg-point-label {
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* Legend ------------------------------------------------------------- */
+.trade-flow-globe-container .tfg-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  background: rgba(12, 18, 28, 0.82);
+  color: #f5f7fa;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  max-width: 220px;
+  z-index: 500;
+  backdrop-filter: blur(4px);
+}
+
+.trade-flow-globe-container .tfg-legend-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.85;
+}
+
+.trade-flow-globe-container .tfg-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.trade-flow-globe-container .tfg-legend-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  flex-shrink: 0;
+}
+
+.trade-flow-globe-container .tfg-legend-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.trade-flow-globe-container .tfg-legend-label {
+  font-size: 12px;
+  line-height: 1.2;
+}

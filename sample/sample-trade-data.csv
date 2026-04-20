@@ -1,0 +1,65 @@
+DealId,OriginCountry,DestinationCountry,Commodity,Category,FinancedAmount,Volume
+TF-0001,Ghana,Netherlands,Cocoa,Soft Commodities,4800000,3200
+TF-0002,Ivory Coast,Belgium,Cocoa,Soft Commodities,6200000,4100
+TF-0003,Ivory Coast,Switzerland,Cocoa,Soft Commodities,3100000,2000
+TF-0004,Ecuador,Germany,Cocoa,Soft Commodities,2100000,1300
+TF-0005,Peru,Switzerland,Coffee,Soft Commodities,5400000,2800
+TF-0006,Colombia,United States,Coffee,Soft Commodities,8800000,4600
+TF-0007,Brazil,Germany,Coffee,Soft Commodities,11200000,6100
+TF-0008,Vietnam,United States,Coffee,Soft Commodities,6700000,3900
+TF-0009,Ethiopia,Japan,Coffee,Soft Commodities,2600000,1400
+TF-0010,Argentina,China,Soybeans,Soft Commodities,24500000,58000
+TF-0011,Brazil,China,Soybeans,Soft Commodities,42000000,98000
+TF-0012,United States,China,Soybeans,Soft Commodities,31500000,72000
+TF-0013,Ukraine,Egypt,Wheat,Soft Commodities,14200000,65000
+TF-0014,Russia,Turkey,Wheat,Soft Commodities,9800000,52000
+TF-0015,Australia,Indonesia,Wheat,Soft Commodities,7400000,38000
+TF-0016,Canada,Japan,Wheat,Soft Commodities,6300000,31000
+TF-0017,Chile,China,Copper,Hard Commodities,38000000,11500
+TF-0018,Peru,China,Copper,Hard Commodities,29500000,8700
+TF-0019,Zambia,Switzerland,Copper,Hard Commodities,18400000,5400
+TF-0020,Democratic Republic of the Congo,China,Cobalt,Hard Commodities,22100000,780
+TF-0021,Democratic Republic of the Congo,Belgium,Cobalt,Hard Commodities,9200000,310
+TF-0022,Australia,South Korea,Iron Ore,Hard Commodities,41000000,215000
+TF-0023,Brazil,China,Iron Ore,Hard Commodities,56000000,310000
+TF-0024,Saudi Arabia,India,Crude Oil,Hard Commodities,68000000,820000
+TF-0025,Saudi Arabia,China,Crude Oil,Hard Commodities,94000000,1150000
+TF-0026,Iraq,India,Crude Oil,Hard Commodities,45000000,560000
+TF-0027,Nigeria,Netherlands,Crude Oil,Hard Commodities,32000000,410000
+TF-0028,Angola,China,Crude Oil,Hard Commodities,51000000,640000
+TF-0029,United States,Japan,LNG,Hard Commodities,27500000,180000
+TF-0030,Qatar,South Korea,LNG,Hard Commodities,36000000,240000
+TF-0031,Australia,Japan,LNG,Hard Commodities,33000000,220000
+TF-0032,Indonesia,China,Palm Oil,Soft Commodities,15800000,22000
+TF-0033,Malaysia,India,Palm Oil,Soft Commodities,21400000,31000
+TF-0034,Indonesia,Netherlands,Palm Oil,Soft Commodities,11200000,15000
+TF-0035,India,United Arab Emirates,Rice,Soft Commodities,7800000,42000
+TF-0036,Thailand,Nigeria,Rice,Soft Commodities,6900000,38000
+TF-0037,Vietnam,Philippines,Rice,Soft Commodities,5400000,30000
+TF-0038,South Africa,United Kingdom,Wine,FMCG,1900000,1200
+TF-0039,Chile,United States,Wine,FMCG,3400000,2400
+TF-0040,Argentina,Brazil,Wine,FMCG,1600000,1100
+TF-0041,France,China,Spirits,FMCG,5800000,900
+TF-0042,Ireland,United States,Spirits,FMCG,4200000,750
+TF-0043,New Zealand,China,Dairy,FMCG,9600000,18000
+TF-0044,Netherlands,Nigeria,Packaged Food,FMCG,3100000,4200
+TF-0045,Turkey,Germany,Hazelnuts,Soft Commodities,2800000,3900
+TF-0046,Colombia,Netherlands,Cut Flowers,Soft Commodities,4100000,950
+TF-0047,Kenya,Netherlands,Cut Flowers,Soft Commodities,3300000,820
+TF-0048,Germany,United States,Machinery,Industrial Products,18500000,2600
+TF-0049,Japan,Mexico,Auto Parts,Industrial Products,12400000,3100
+TF-0050,China,India,Chemicals,Industrial Products,16700000,22000
+TF-0051,Belarus,Brazil,Potash,Industrial Products,9800000,48000
+TF-0052,Russia,India,Urea,Industrial Products,11200000,56000
+TF-0053,Sweden,Germany,Steel,Industrial Products,7900000,18000
+TF-0054,Canada,United States,Lumber,Industrial Products,6400000,42000
+TF-0055,Zimbabwe,Germany,Tobacco,Tobacco,4600000,3800
+TF-0056,Malawi,Belgium,Tobacco,Tobacco,3200000,2900
+TF-0057,Brazil,United States,Tobacco,Tobacco,7100000,5400
+TF-0058,Turkey,Russia,Tobacco,Tobacco,2100000,1800
+TF-0059,Dominican Republic,Spain,Cigars,Tobacco,1800000,120
+TF-0060,Luxembourg,United Arab Emirates,Letters of Credit,Financial Instruments,22000000,
+TF-0061,Switzerland,Singapore,Letters of Credit,Financial Instruments,31000000,
+TF-0062,United Kingdom,Hong Kong,Letters of Credit,Financial Instruments,18500000,
+TF-0063,Singapore,India,Receivables,Financial Instruments,9400000,
+TF-0064,United States,Mexico,Receivables,Financial Instruments,12800000,

@@ -1,0 +1,127 @@
+{
+  "id": "trade-flow-globe",
+  "name": "Trade Flow Globe",
+  "description": "Spinning 3D globe showing commodity flows (Soft, Hard, FMCG, Industrial, Financial, Tobacco) from origin to destination countries. Built for trade finance fund dashboards.",
+  "version": "1.1.0",
+  "category": "Custom Widgets",
+  "icon": "icon.svg",
+  "scripts": [
+    "https://unpkg.com/three@0.160.0/build/three.min.js",
+    "https://unpkg.com/globe.gl@2.32.0/dist/globe.gl.min.js",
+    "country-centroids.js",
+    "commodity-categories.js",
+    "trade-flow-map.js"
+  ],
+  "styles": [
+    "trade-flow-map.css"
+  ],
+  "widgetSettings": {
+    "dataSettings": {
+      "values": [
+        {
+          "name": "OriginCountry",
+          "displayName": "Origin Country",
+          "type": "dimension",
+          "isRequired": true,
+          "maxCount": 1,
+          "description": "ISO-2, ISO-3 code, or English country name of commodity origin."
+        },
+        {
+          "name": "DestinationCountry",
+          "displayName": "Destination Country",
+          "type": "dimension",
+          "isRequired": true,
+          "maxCount": 1,
+          "description": "ISO-2, ISO-3 code, or English country name of commodity destination."
+        },
+        {
+          "name": "Commodity",
+          "displayName": "Commodity",
+          "type": "dimension",
+          "isRequired": false,
+          "maxCount": 1,
+          "description": "Specific commodity (e.g. Cocoa, Copper, Crude Oil). Used for tooltips and auto-category assignment."
+        },
+        {
+          "name": "Category",
+          "displayName": "Commodity Category",
+          "type": "dimension",
+          "isRequired": false,
+          "maxCount": 1,
+          "description": "Soft Commodities, Hard Commodities, FMCG, Industrial Products, Financial Instruments, or Tobacco. If omitted the widget classifies from the Commodity column."
+        },
+        {
+          "name": "FinancedAmount",
+          "displayName": "Financed Amount",
+          "type": "measure",
+          "isRequired": true,
+          "maxCount": 1,
+          "description": "USD value of the trade being financed. Drives arc thickness."
+        },
+        {
+          "name": "Volume",
+          "displayName": "Volume",
+          "type": "measure",
+          "isRequired": false,
+          "maxCount": 1,
+          "description": "Physical volume (tonnes, barrels, etc.) - optional."
+        }
+      ]
+    },
+    "appearanceSettings": [
+      {
+        "name": "globeStyle",
+        "displayName": "Globe Style",
+        "type": "dropdown",
+        "defaultValue": "night",
+        "options": [
+          { "text": "Night (dark)",    "value": "night" },
+          { "text": "Day (light)",     "value": "day" },
+          { "text": "Topographic",     "value": "topo" }
+        ]
+      },
+      {
+        "name": "autoRotate",
+        "displayName": "Spin globe",
+        "type": "checkbox",
+        "defaultValue": true
+      },
+      {
+        "name": "rotateSpeed",
+        "displayName": "Spin speed",
+        "type": "number",
+        "defaultValue": 0.4
+      },
+      {
+        "name": "animateArcs",
+        "displayName": "Animate flows",
+        "type": "checkbox",
+        "defaultValue": true
+      },
+      {
+        "name": "showIcons",
+        "displayName": "Show commodity icons at origins",
+        "type": "checkbox",
+        "defaultValue": true
+      },
+      {
+        "name": "showLegend",
+        "displayName": "Show category legend",
+        "type": "checkbox",
+        "defaultValue": true
+      },
+      {
+        "name": "minArcWidth",
+        "displayName": "Min arc width",
+        "type": "number",
+        "defaultValue": 0.2
+      },
+      {
+        "name": "maxArcWidth",
+        "displayName": "Max arc width",
+        "type": "number",
+        "defaultValue": 2.5
+      }
+    ]
+  }
+}
