@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: investor-tracker/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build Windows installer
         run: npm run package
