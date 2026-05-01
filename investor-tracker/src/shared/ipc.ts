@@ -46,6 +46,7 @@ export const IPC_CHANNELS = {
   // Jobs
   JOBS_RUN_POLLER: "jobs:runPoller",
   JOBS_RUN_DAILY_CLASSIFIER: "jobs:runDailyClassifier",
+  JOBS_RUN_POLL_AND_CLASSIFY: "jobs:runPollAndClassify",
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

@@ -4,11 +4,16 @@ import { getSettings } from "../store/repositories/settings";
 import type { Message } from "@shared/types";
 import { findContactByEmail } from "../store/repositories/contacts";
 import { updateMessageContact, updateMessageEntity } from "../store/repositories/messages";
+import { runDailyClassifier, type DailyClassifierResult } from "./dailyClassifier";
 
 export interface PollerResult {
   newMail: number;
   newTeams: number;
   errors: string[];
+}
+
+export interface PollAndClassifyResult extends PollerResult {
+  classifier: DailyClassifierResult | null;
 }
 
 export const runPoller = async (): Promise<PollerResult> => {
@@ -45,5 +50,23 @@ const attachKnownContacts = (messages: Message[]): void => {
     if (!contact) continue;
     updateMessageContact(m.id, contact.id);
     updateMessageEntity(m.id, contact.entityId);
+  }
+};
+
+export const runPollAndClassify = async (): Promise<PollAndClassifyResult> => {
+  const pollResult = await runPoller();
+  const newMessages = pollResult.newMail + pollResult.newTeams;
+  if (newMessages === 0) {
+    return { ...pollResult, classifier: null };
+  }
+  try {
+    const classifier = await runDailyClassifier();
+    return { ...pollResult, classifier };
+  } catch (e) {
+    return {
+      ...pollResult,
+      classifier: null,
+      errors: [...pollResult.errors, `classifier: ${(e as Error).message}`],
+    };
   }
 };

@@ -158,11 +158,23 @@ export const Settings = (): JSX.Element => {
             onChange={(e) => void update({ dailyClassifierHourLocal: Number(e.target.value) || 0 })}
           />
         </div>
+      </div>
+
+      <div className="card">
+        <h3>Investor search context</h3>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Describe what kind of investors you&apos;re looking for. Claude uses this when
+          deciding whether each email is a relevant investor message. Be specific —
+          mention sectors, geographies, ticket sizes, vehicle types.
+        </div>
         <div className="form-group">
-          <label>Demand book sender email</label>
-          <input
-            value={settings.demandBookSenderEmail}
-            onChange={(e) => void update({ demandBookSenderEmail: e.target.value })}
+          <textarea
+            rows={6}
+            placeholder={
+              "e.g. Fund managers, family offices, DFIs, and allocators interested in trade finance, African private credit, or emerging-market debt. Tickets of $5M-$50M for a Cayman fund or SMA."
+            }
+            value={settings.investorSearchContext}
+            onChange={(e) => void update({ investorSearchContext: e.target.value })}
           />
         </div>
       </div>

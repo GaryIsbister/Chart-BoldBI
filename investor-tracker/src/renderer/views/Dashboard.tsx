@@ -1,31 +1,60 @@
 import { useEffect, useState } from "react";
 import { invoke } from "../api";
 import { IPC_CHANNELS } from "@shared/ipc";
-import type { ActionItem, Entity, PendingReview } from "@shared/types";
+import type { ActionItem, Entity, PendingReview, Settings } from "@shared/types";
+
+type JobLabel = "poller" | "classifier" | "pollAndClassify";
 
 export const Dashboard = (): JSX.Element => {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [pending, setPending] = useState<PendingReview[]>([]);
-  const [running, setRunning] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [searchDraft, setSearchDraft] = useState<string>("");
+  const [savingContext, setSavingContext] = useState<boolean>(false);
+  const [running, setRunning] = useState<JobLabel | null>(null);
   const [status, setStatus] = useState<string>("");
 
   const refresh = async (): Promise<void> => {
-    const [e, a, p] = await Promise.all([
+    const [e, a, p, s] = await Promise.all([
       invoke<Entity[]>(IPC_CHANNELS.ENTITIES_LIST),
       invoke<ActionItem[]>(IPC_CHANNELS.ACTION_ITEMS_LIST, { status: "open" }),
       invoke<PendingReview[]>(IPC_CHANNELS.PENDING_REVIEWS_LIST),
+      invoke<Settings>(IPC_CHANNELS.SETTINGS_GET),
     ]);
     setEntities(e);
     setActionItems(a);
     setPending(p);
+    setSettings(s);
+    setSearchDraft(s.investorSearchContext);
   };
 
   useEffect(() => {
     void refresh();
   }, []);
 
-  const runJob = async (channel: typeof IPC_CHANNELS.JOBS_RUN_POLLER | typeof IPC_CHANNELS.JOBS_RUN_DAILY_CLASSIFIER, label: string): Promise<void> => {
+  const saveContext = async (): Promise<void> => {
+    setSavingContext(true);
+    try {
+      const updated = await invoke<Settings>(IPC_CHANNELS.SETTINGS_UPDATE, {
+        investorSearchContext: searchDraft,
+      });
+      setSettings(updated);
+    } finally {
+      setSavingContext(false);
+    }
+  };
+
+  const runJob = async (
+    channel:
+      | typeof IPC_CHANNELS.JOBS_RUN_POLLER
+      | typeof IPC_CHANNELS.JOBS_RUN_DAILY_CLASSIFIER
+      | typeof IPC_CHANNELS.JOBS_RUN_POLL_AND_CLASSIFY,
+    label: JobLabel,
+  ): Promise<void> => {
+    if (label !== "poller" && settings && searchDraft !== settings.investorSearchContext) {
+      await saveContext();
+    }
     setRunning(label);
     setStatus("");
     try {
@@ -47,21 +76,65 @@ export const Dashboard = (): JSX.Element => {
   return (
     <div>
       <h2>Dashboard</h2>
+
+      <div className="card">
+        <h3>Investor search context</h3>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Describe the kind of investors you&apos;re looking for. Claude scans newly
+          polled emails and flags senders matching this description.
+        </div>
+        <div className="form-group">
+          <textarea
+            rows={4}
+            placeholder={
+              "e.g. Family offices and DFIs interested in African trade finance. Tickets $5M-$50M."
+            }
+            value={searchDraft}
+            onChange={(ev) => setSearchDraft(ev.target.value)}
+            onBlur={() => {
+              if (settings && searchDraft !== settings.investorSearchContext) {
+                void saveContext();
+              }
+            }}
+          />
+        </div>
+        <button
+          className="btn secondary"
+          disabled={savingContext || !settings || searchDraft === settings.investorSearchContext}
+          onClick={() => void saveContext()}
+        >
+          {savingContext ? "Saving..." : "Save context"}
+        </button>
+      </div>
+
       <div className="card">
         <div className="row">
           <button
             className="btn"
             disabled={running !== null}
-            onClick={() => void runJob(IPC_CHANNELS.JOBS_RUN_POLLER, "poller")}
+            onClick={() =>
+              void runJob(IPC_CHANNELS.JOBS_RUN_POLL_AND_CLASSIFY, "pollAndClassify")
+            }
           >
-            {running === "poller" ? "Polling..." : "Run poller now"}
+            {running === "pollAndClassify"
+              ? "Polling & classifying..."
+              : "Poll inbox & find matching investors"}
           </button>
           <button
             className="btn secondary"
             disabled={running !== null}
-            onClick={() => void runJob(IPC_CHANNELS.JOBS_RUN_DAILY_CLASSIFIER, "classifier")}
+            onClick={() => void runJob(IPC_CHANNELS.JOBS_RUN_POLLER, "poller")}
           >
-            {running === "classifier" ? "Classifying..." : "Run daily classifier"}
+            {running === "poller" ? "Polling..." : "Poll only"}
+          </button>
+          <button
+            className="btn secondary"
+            disabled={running !== null}
+            onClick={() =>
+              void runJob(IPC_CHANNELS.JOBS_RUN_DAILY_CLASSIFIER, "classifier")
+            }
+          >
+            {running === "classifier" ? "Classifying..." : "Classify only"}
           </button>
         </div>
         {status && <div className="muted" style={{ marginTop: 8 }}>{status}</div>}

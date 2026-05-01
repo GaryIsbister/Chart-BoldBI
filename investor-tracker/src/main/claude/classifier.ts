@@ -8,29 +8,30 @@ export interface ClassifierResult {
   proposedEntityName: string;
   confidence: number;
   reasoning: string;
-  matchedDemandBookEntry: string | null;
 }
 
 interface ClassifierContext {
   message: Message;
-  demandBookContext: string;
+  searchContext: string;
   knownEntities: string[];
 }
 
-const SYSTEM_PROMPT = `You are an assistant that helps a venture investor identify which inbound emails and Teams messages are from prospective LP investors versus general business correspondence.
+const buildSystemPrompt = (searchContext: string): string => {
+  const trimmed = searchContext.trim();
+  const userBlock = trimmed.length > 0
+    ? `\n\nThe user is specifically looking for messages matching this description:\n"""\n${trimmed}\n"""\nA sender qualifies as an investor only if the message could plausibly be from someone matching this description. If the message has no relation to that description, return is_investor=false.`
+    : "";
 
-Given:
-- A single message (sender, subject, preview)
-- A short "demand book" excerpt of investors who have expressed interest in the current fundraise
-- A list of known investor entities already tracked
+  return `You help a fundraising team identify which inbound emails and Teams messages are from prospective investors (LPs, GPs, family offices, allocators, advisors representing one) versus general business correspondence.
 
-Decide:
-1. Is the sender plausibly an investor (LP, GP, family office, fund-of-funds, allocator, advisor representing one)?
-2. Which entity (firm/family) does the sender belong to? Use a stable canonical name.
+Given a single message and the team's search context, decide:
+1. Is the sender plausibly an investor matching the search context?
+2. Which firm/entity name does the sender belong to (use a stable canonical name like "Swedfund" not "Mr. X from Swedfund").
 3. Confidence in [0, 1].
-4. Whether the sender matches a row in the demand book.
+4. One- or two-sentence reasoning.${userBlock}
 
-Output JSON ONLY with keys: is_investor (bool), proposed_entity_name (string), confidence (number), reasoning (string, <=2 sentences), matched_demand_book_entry (string|null).`;
+Output JSON ONLY with these keys: is_investor (bool), proposed_entity_name (string), confidence (number), reasoning (string).`;
+};
 
 const buildUserPrompt = (ctx: ClassifierContext): string => {
   const m = ctx.message;
@@ -41,11 +42,8 @@ const buildUserPrompt = (ctx: ClassifierContext): string => {
     `Subject: ${m.subject ?? ""}`,
     `Preview: ${m.bodyPreview.slice(0, 800)}`,
     "",
-    "Known tracked entities:",
+    "Already-tracked investor entities (for canonical-name reuse):",
     ctx.knownEntities.slice(0, 50).map((n) => `- ${n}`).join("\n") || "(none)",
-    "",
-    "Demand book excerpt:",
-    ctx.demandBookContext || "(none)",
   ];
   return lines.join("\n");
 };
@@ -64,7 +62,7 @@ export const classifyMessage = async (
   const response = await claude.messages.create({
     model: settings.classifierModel,
     max_tokens: 400,
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt(ctx.searchContext),
     messages: [{ role: "user", content: buildUserPrompt(ctx) }],
   });
 
@@ -77,13 +75,14 @@ export const classifyMessage = async (
     proposed_entity_name?: string;
     confidence?: number;
     reasoning?: string;
-    matched_demand_book_entry?: string | null;
   };
   return {
     isInvestor: Boolean(parsed.is_investor),
     proposedEntityName: parsed.proposed_entity_name ?? "Unknown",
-    confidence: typeof parsed.confidence === "number" ? Math.max(0, Math.min(1, parsed.confidence)) : 0,
+    confidence:
+      typeof parsed.confidence === "number"
+        ? Math.max(0, Math.min(1, parsed.confidence))
+        : 0,
     reasoning: parsed.reasoning ?? "",
-    matchedDemandBookEntry: parsed.matched_demand_book_entry ?? null,
   };
 };
