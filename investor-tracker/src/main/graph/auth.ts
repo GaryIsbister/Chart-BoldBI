@@ -1,6 +1,41 @@
+import path from "node:path";
+import fs from "node:fs";
+import { app, safeStorage } from "electron";
 import { PublicClientApplication, type AuthenticationResult } from "@azure/msal-node";
 import { KEYCHAIN_KEYS, keychain } from "../keychain";
 import { getSettings } from "../store/repositories/settings";
+
+const tokenCacheFile = (): string =>
+  path.join(app.getPath("userData"), "msal-token-cache.bin");
+
+const writeTokenCache = (serialized: string): void => {
+  const file = tokenCacheFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (safeStorage.isEncryptionAvailable()) {
+    fs.writeFileSync(file, safeStorage.encryptString(serialized));
+  } else {
+    fs.writeFileSync(file, serialized, "utf8");
+  }
+};
+
+const readTokenCache = (): string | null => {
+  const file = tokenCacheFile();
+  if (!fs.existsSync(file)) return null;
+  const buf = fs.readFileSync(file);
+  if (safeStorage.isEncryptionAvailable()) {
+    try {
+      return safeStorage.decryptString(buf);
+    } catch {
+      return buf.toString("utf8");
+    }
+  }
+  return buf.toString("utf8");
+};
+
+const deleteTokenCache = (): void => {
+  const file = tokenCacheFile();
+  if (fs.existsSync(file)) fs.unlinkSync(file);
+};
 
 const SCOPES = [
   "Mail.Read",
@@ -75,15 +110,13 @@ const persistResult = async (result: AuthenticationResult): Promise<void> => {
     expiresAt: result.expiresOn ? result.expiresOn.getTime() : Date.now() + 60 * 60 * 1000,
     account: result.account?.username ?? null,
   };
-  // MSAL caches its own refresh token in-memory; for persistence across launches
-  // we write the token cache to keychain.
   const client = ensureClient();
   const tokenCache = client.getTokenCache().serialize();
-  await keychain.set(KEYCHAIN_KEYS.MICROSOFT_REFRESH_TOKEN, tokenCache);
+  writeTokenCache(tokenCache);
 };
 
 const tryHydrateFromCache = async (): Promise<void> => {
-  const serialized = await keychain.get(KEYCHAIN_KEYS.MICROSOFT_REFRESH_TOKEN);
+  const serialized = readTokenCache();
   if (!serialized) return;
   const client = ensureClient();
   await client.getTokenCache().deserialize(serialized);
@@ -122,6 +155,7 @@ export const getSignedInAccount = async (): Promise<string | null> => {
 export const signOut = async (): Promise<void> => {
   cached = null;
   pca = null;
+  deleteTokenCache();
   await keychain.delete(KEYCHAIN_KEYS.MICROSOFT_REFRESH_TOKEN);
   await keychain.delete(KEYCHAIN_KEYS.MICROSOFT_ACCOUNT);
 };
