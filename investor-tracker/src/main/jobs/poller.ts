@@ -55,10 +55,6 @@ const attachKnownContacts = (messages: Message[]): void => {
 
 export const runPollAndClassify = async (): Promise<PollAndClassifyResult> => {
   const pollResult = await runPoller();
-  const newMessages = pollResult.newMail + pollResult.newTeams;
-  if (newMessages === 0) {
-    return { ...pollResult, classifier: null };
-  }
   try {
     const classifier = await runDailyClassifier();
     return { ...pollResult, classifier };

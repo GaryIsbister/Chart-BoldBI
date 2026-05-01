@@ -46,20 +46,22 @@ export const fetchTeamsDelta = async (): Promise<Message[]> => {
   const skippedChats: string[] = [];
   for (const chat of chats.value) {
     const since = getCursor(teamsCursorKey(chat.id));
-    const filter = since
-      ? `&$filter=${encodeURIComponent(`createdDateTime gt ${since}`)}`
-      : "";
     let url: string | null =
-      `/me/chats/${encodeURIComponent(chat.id)}/messages?$top=50${filter}`;
+      `/me/chats/${encodeURIComponent(chat.id)}/messages?$top=50`;
     let pages = 0;
     let newestSeen: string | null = null;
 
     try {
     while (url && pages < 3) {
       const page: GraphPage<GraphChatMessage> = await graphFetch<GraphPage<GraphChatMessage>>(url);
+      let stoppedByCursor = false;
       for (const msg of page.value) {
         if (!newestSeen || msg.createdDateTime > newestSeen) {
           newestSeen = msg.createdDateTime;
+        }
+        if (since && msg.createdDateTime <= since) {
+          stoppedByCursor = true;
+          break;
         }
         if (findMessageByExternalId("teams_chat", msg.id)) continue;
         if (!msg.from?.user) continue;
@@ -96,6 +98,7 @@ export const fetchTeamsDelta = async (): Promise<Message[]> => {
         });
         inserted.push(stored);
       }
+      if (stoppedByCursor) break;
       url = page["@odata.nextLink"] ?? null;
       pages += 1;
     }
