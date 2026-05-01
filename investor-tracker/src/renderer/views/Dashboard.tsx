@@ -115,14 +115,14 @@ export const Dashboard = (): JSX.Element => {
 
         <h4 style={{ marginTop: 8 }}>Keywords (one per line)</h4>
         <div className="muted" style={{ marginBottom: 8 }}>
-          Specific words or phrases Claude should look for in subject, body, or
-          sender info.
+          Specific words, phrases, or investor names Claude should look for in
+          subject, body, or sender info.
         </div>
         <div className="form-group">
           <textarea
             rows={5}
             placeholder={
-              "trade finance\nprivate credit\nfamily office\nLP commitment"
+              "trade finance\nprivate credit\nfamily office\nLP commitment\nSwedfund\nBlackRock"
             }
             value={keywordsDraft}
             onChange={(ev) => setKeywordsDraft(ev.target.value)}
@@ -131,6 +131,36 @@ export const Dashboard = (): JSX.Element => {
             }}
           />
         </div>
+        {settings && (
+          <label
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "flex-start",
+              marginBottom: 8,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={settings.keywordPrefilterEnabled}
+              onChange={(e) =>
+                void invoke<Settings>(IPC_CHANNELS.SETTINGS_UPDATE, {
+                  keywordPrefilterEnabled: e.target.checked,
+                }).then(setSettings)
+              }
+              style={{ width: "auto", marginTop: 4 }}
+            />
+            <span>
+              <span>Only classify emails matching keywords</span>
+              <div className="muted" style={{ fontSize: 12 }}>
+                Saves Claude API cost by skipping emails whose subject, body, or
+                sender doesn&apos;t match any keyword. Tradeoff: investor emails
+                that don&apos;t mention a keyword will be missed. Add investor
+                firm names as keywords to catch them.
+              </div>
+            </span>
+          </label>
+        )}
         <button
           className="btn secondary"
           disabled={savingContext || !isContextDirty()}

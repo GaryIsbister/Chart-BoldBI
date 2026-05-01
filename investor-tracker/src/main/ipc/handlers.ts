@@ -39,7 +39,12 @@ import {
   reopenPendingReview,
   setPendingReviewDecision,
 } from "../store/repositories/pendingReviews";
-import { runPoller, runPollAndClassify } from "../jobs/poller";
+import {
+  runBackfillForInvestor,
+  runBackfillMail,
+  runPoller,
+  runPollAndClassify,
+} from "../jobs/poller";
 import { runDailyClassifier } from "../jobs/dailyClassifier";
 import { runThreadRefresherForEntity } from "../jobs/threadRefresher";
 import { signIn, signOut, getSignedInAccount } from "../graph/auth";
@@ -226,5 +231,13 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.JOBS_RUN_POLL_AND_CLASSIFY, () => runPollAndClassify());
   ipcMain.handle(IPC_CHANNELS.JOBS_REFRESH_ENTITY_THREADS, (_e, entityId: string) =>
     runThreadRefresherForEntity(entityId),
+  );
+  ipcMain.handle(IPC_CHANNELS.JOBS_BACKFILL_MAIL, (_e, monthsBack: number) =>
+    runBackfillMail(monthsBack),
+  );
+  ipcMain.handle(
+    IPC_CHANNELS.JOBS_BACKFILL_FOR_INVESTOR,
+    (_e, args: { entityId: string; monthsBack: number }) =>
+      runBackfillForInvestor(args.entityId, args.monthsBack),
   );
 };

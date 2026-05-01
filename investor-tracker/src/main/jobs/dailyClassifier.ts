@@ -35,6 +35,12 @@ export const runDailyClassifier = async (): Promise<DailyClassifierResult> => {
   const knownEntities = listEntities().map((e) => e.name);
   const searchContext = settings.investorSearchContext;
   const searchKeywords = settings.searchKeywords;
+  const lowerKeywords = searchKeywords
+    .map((k) => k.trim().toLowerCase())
+    .filter((k) => k.length > 0);
+  const prefilter = settings.keywordPrefilterEnabled && lowerKeywords.length > 0;
+  const matchesAnyKeyword = (text: string): boolean =>
+    lowerKeywords.some((k) => text.includes(k));
 
   for (const message of messages) {
     try {
@@ -54,6 +60,19 @@ export const runDailyClassifier = async (): Promise<DailyClassifierResult> => {
         if (message.threadId) updateThreadEntity(message.threadId, existing.id);
         classified += 1;
         continue;
+      }
+
+      if (prefilter) {
+        const haystack = [
+          message.fromEmail,
+          message.fromName ?? "",
+          message.subject ?? "",
+          message.bodyPreview,
+          domain ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!matchesAnyKeyword(haystack)) continue;
       }
 
       const result = await classifyMessage({

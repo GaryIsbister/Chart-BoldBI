@@ -148,3 +148,163 @@ export const fetchMailDelta = async (options: FetchMailOptions): Promise<Message
   }
   return inserted;
 };
+
+export interface BackfillForInvestorOptions {
+  emails: string[];
+  monthsBack: number;
+  folders: string[];
+  pageSize?: number;
+  maxPages?: number;
+}
+
+export const fetchMailForInvestor = async (
+  options: BackfillForInvestorOptions,
+): Promise<Message[]> => {
+  const emails = options.emails.map((e) => e.trim()).filter((e) => e.length > 0);
+  if (emails.length === 0) return [];
+
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - options.monthsBack);
+  const sinceIso = cutoff.toISOString();
+  const pageSize = options.pageSize ?? 50;
+  const maxPages = options.maxPages ?? 50;
+  const accountEmail = (await getSignedInAccount())?.toLowerCase() ?? null;
+
+  const inserted: Message[] = [];
+  for (const folder of options.folders) {
+    const folderId = await resolveFolderId(folder);
+    if (!folderId) continue;
+    const senderClause = emails
+      .map((e) => `from/emailAddress/address eq '${e.replace(/'/g, "''")}'`)
+      .join(" or ");
+    const filter = `(receivedDateTime ge ${sinceIso}) and (${senderClause})`;
+    const folderPath = `/me/mailFolders/${folderId}/messages`;
+    let url: string | null = `${folderPath}?$top=${pageSize}&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}`;
+    let pages = 0;
+
+    while (url && pages < maxPages) {
+      const page: GraphPage<GraphMessage> = await graphFetch<GraphPage<GraphMessage>>(url);
+      for (const msg of page.value) {
+        if (findMessageByExternalId("outlook_mail", msg.id)) continue;
+        const fromAddr =
+          msg.from?.emailAddress?.address ?? msg.sender?.emailAddress?.address ?? "";
+        const fromName =
+          msg.from?.emailAddress?.name ?? msg.sender?.emailAddress?.name ?? null;
+        const toEmails = (msg.toRecipients ?? [])
+          .map((r) => r.emailAddress?.address ?? "")
+          .filter((s) => s.length > 0);
+        const isFromUs =
+          accountEmail !== null && fromAddr.toLowerCase() === accountEmail;
+
+        const thread = upsertThread({
+          source: "outlook_mail",
+          externalConversationId: msg.conversationId,
+          subject: msg.subject,
+          lastMessageAt: msg.receivedDateTime,
+        });
+
+        const stored = insertMessage({
+          source: "outlook_mail",
+          externalId: msg.id,
+          threadId: thread.id,
+          contactId: null,
+          entityId: null,
+          fromEmail: fromAddr,
+          fromName,
+          toEmails,
+          subject: msg.subject,
+          bodyPreview: msg.bodyPreview,
+          receivedAt: msg.receivedDateTime,
+          isFromUs,
+          raw: msg,
+        });
+        inserted.push(stored);
+      }
+      url = page["@odata.nextLink"] ?? null;
+      pages += 1;
+    }
+  }
+  return inserted;
+};
+
+export interface BackfillMailOptions {
+  folder: string;
+  sinceIso: string;
+  pageSize?: number;
+  maxPages?: number;
+  onProgress?: (folder: string, pages: number, fetched: number) => void;
+}
+
+export const fetchMailBackfill = async (
+  options: BackfillMailOptions,
+): Promise<Message[]> => {
+  const pageSize = options.pageSize ?? 50;
+  const maxPages = options.maxPages ?? 400;
+  const accountEmail = (await getSignedInAccount())?.toLowerCase() ?? null;
+  const folderId = await resolveFolderId(options.folder);
+  if (!folderId) return [];
+
+  const filter = `&$filter=${encodeURIComponent(
+    `receivedDateTime ge ${options.sinceIso}`,
+  )}`;
+  const folderPath = `/me/mailFolders/${folderId}/messages`;
+  let url: string | null = `${folderPath}?$top=${pageSize}&$orderby=receivedDateTime desc${filter}`;
+
+  const inserted: Message[] = [];
+  let pages = 0;
+  let newestSeen: string | null = null;
+
+  while (url && pages < maxPages) {
+    const page: GraphPage<GraphMessage> = await graphFetch<GraphPage<GraphMessage>>(url);
+    for (const msg of page.value) {
+      if (!newestSeen || msg.receivedDateTime > newestSeen) {
+        newestSeen = msg.receivedDateTime;
+      }
+      if (findMessageByExternalId("outlook_mail", msg.id)) continue;
+      const fromAddr =
+        msg.from?.emailAddress?.address ?? msg.sender?.emailAddress?.address ?? "";
+      const fromName =
+        msg.from?.emailAddress?.name ?? msg.sender?.emailAddress?.name ?? null;
+      const toEmails = (msg.toRecipients ?? [])
+        .map((r) => r.emailAddress?.address ?? "")
+        .filter((s) => s.length > 0);
+      const isFromUs =
+        accountEmail !== null && fromAddr.toLowerCase() === accountEmail;
+
+      const thread = upsertThread({
+        source: "outlook_mail",
+        externalConversationId: msg.conversationId,
+        subject: msg.subject,
+        lastMessageAt: msg.receivedDateTime,
+      });
+
+      const stored = insertMessage({
+        source: "outlook_mail",
+        externalId: msg.id,
+        threadId: thread.id,
+        contactId: null,
+        entityId: null,
+        fromEmail: fromAddr,
+        fromName,
+        toEmails,
+        subject: msg.subject,
+        bodyPreview: msg.bodyPreview,
+        receivedAt: msg.receivedDateTime,
+        isFromUs,
+        raw: msg,
+      });
+      inserted.push(stored);
+    }
+    pages += 1;
+    options.onProgress?.(options.folder, pages, inserted.length);
+    url = page["@odata.nextLink"] ?? null;
+  }
+
+  if (newestSeen) {
+    const existingCursor = getCursor(cursorKey(options.folder));
+    if (!existingCursor || newestSeen > existingCursor) {
+      setCursor(cursorKey(options.folder), newestSeen);
+    }
+  }
+  return inserted;
+};

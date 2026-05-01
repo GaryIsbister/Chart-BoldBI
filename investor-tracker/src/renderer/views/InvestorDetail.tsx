@@ -54,6 +54,9 @@ export const InvestorDetail = (): JSX.Element => {
   const [analyzing, setAnalyzing] = useState<boolean>(false);
   const [analyzeStatus, setAnalyzeStatus] = useState<string>("");
   const [showManualContact, setShowManualContact] = useState<boolean>(false);
+  const [backfillMonths, setBackfillMonths] = useState<number>(6);
+  const [backfilling, setBackfilling] = useState<boolean>(false);
+  const [backfillStatus, setBackfillStatus] = useState<string>("");
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -182,6 +185,36 @@ export const InvestorDetail = (): JSX.Element => {
       setAnalyzeStatus(`Failed: ${(e as Error).message}`);
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const runInvestorBackfill = async (): Promise<void> => {
+    if (!id) return;
+    if (contacts.length === 0) {
+      setBackfillStatus("Add at least one contact email before backfilling.");
+      return;
+    }
+    setBackfilling(true);
+    setBackfillStatus("");
+    try {
+      const result = await invoke<{
+        fetched: number;
+        linked: number;
+        errors: string[];
+      }>(IPC_CHANNELS.JOBS_BACKFILL_FOR_INVESTOR, {
+        entityId: id,
+        monthsBack: backfillMonths,
+      });
+      const errs =
+        result.errors.length > 0 ? ` · ${result.errors.length} error(s)` : "";
+      setBackfillStatus(
+        `Pulled ${result.fetched} new email(s); linked ${result.linked} message(s) total${errs}`,
+      );
+      await refresh();
+    } catch (e) {
+      setBackfillStatus(`Backfill failed: ${(e as Error).message}`);
+    } finally {
+      setBackfilling(false);
     }
   };
 
@@ -464,6 +497,44 @@ export const InvestorDetail = (): JSX.Element => {
               ))}
             </tbody>
           </table>
+        )}
+
+        <h4 style={{ marginTop: 16 }}>Pull older emails for this investor</h4>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Searches Outlook for older emails sent FROM the contact addresses
+          above and stores them locally. Cheaper than the full backfill — only
+          fetches emails matching this investor.
+        </div>
+        <div className="row">
+          <div style={{ flex: "0 0 auto" }}>
+            <label>Range</label>
+            <select
+              value={backfillMonths}
+              onChange={(e) => setBackfillMonths(Number(e.target.value))}
+              disabled={backfilling}
+            >
+              <option value={3}>3 months</option>
+              <option value={6}>6 months</option>
+              <option value={12}>1 year</option>
+              <option value={36}>3 years</option>
+            </select>
+          </div>
+          <button
+            className="btn"
+            disabled={backfilling || contacts.length === 0}
+            onClick={() => void runInvestorBackfill()}
+            style={{ flex: "0 0 auto", alignSelf: "end" }}
+          >
+            {backfilling ? "Backfilling..." : "Backfill emails"}
+          </button>
+        </div>
+        {contacts.length === 0 && (
+          <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+            Add a contact email before you can backfill.
+          </div>
+        )}
+        {backfillStatus && (
+          <div className="muted" style={{ marginTop: 8 }}>{backfillStatus}</div>
         )}
 
         <h4 style={{ marginTop: 16 }}>Find contact by name</h4>

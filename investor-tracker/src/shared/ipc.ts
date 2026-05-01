@@ -56,6 +56,8 @@ export const IPC_CHANNELS = {
   JOBS_RUN_DAILY_CLASSIFIER: "jobs:runDailyClassifier",
   JOBS_RUN_POLL_AND_CLASSIFY: "jobs:runPollAndClassify",
   JOBS_REFRESH_ENTITY_THREADS: "jobs:refreshEntityThreads",
+  JOBS_BACKFILL_MAIL: "jobs:backfillMail",
+  JOBS_BACKFILL_FOR_INVESTOR: "jobs:backfillForInvestor",
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

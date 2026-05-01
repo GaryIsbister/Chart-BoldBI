@@ -147,5 +147,6 @@ export const Settings = z.object({
   dailyClassifierHourLocal: z.number().int().min(0).max(23).default(7),
   investorSearchContext: z.string().default(""),
   searchKeywords: z.array(z.string()).default([]),
+  keywordPrefilterEnabled: z.boolean().default(false),
 });
 export type Settings = z.infer<typeof Settings>;
