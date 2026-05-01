@@ -35,6 +35,7 @@ export const IPC_CHANNELS = {
   CONTACTS_LIST_FOR_ENTITY: "contacts:listForEntity",
   CONTACTS_CREATE: "contacts:create",
   CONTACTS_FIND_BY_NAME: "contacts:findByName",
+  MAIL_SEARCH_SENDERS: "mail:searchSenders",
 
   // Threads + messages
   THREADS_LIST_FOR_ENTITY: "threads:listForEntity",
@@ -124,6 +125,11 @@ export interface SenderCandidate {
   displayName: string | null;
   messageCount: number;
   lastSeen: string;
+}
+
+export interface SearchSendersArgs {
+  query: string;
+  monthsBack: number;
 }
 
 export type {

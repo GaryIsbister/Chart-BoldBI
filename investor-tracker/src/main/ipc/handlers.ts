@@ -6,6 +6,7 @@ import {
   type CreateContactArgs,
   type CreateEntityArgs,
   type DecidePendingReviewArgs,
+  type SearchSendersArgs,
   type UpdateActionItemStatusArgs,
   type UpdateEntityCategoryArgs,
   type UpdateEntityNotesArgs,
@@ -45,6 +46,7 @@ import {
   runPoller,
   runPollAndClassify,
 } from "../jobs/poller";
+import { searchSendersByQuery } from "../graph/mail";
 import { runDailyClassifier } from "../jobs/dailyClassifier";
 import { runThreadRefresherForEntity } from "../jobs/threadRefresher";
 import { signIn, signOut, getSignedInAccount } from "../graph/auth";
@@ -169,6 +171,9 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   });
   ipcMain.handle(IPC_CHANNELS.CONTACTS_FIND_BY_NAME, (_e, query: string) =>
     findSendersByName(query, 20),
+  );
+  ipcMain.handle(IPC_CHANNELS.MAIL_SEARCH_SENDERS, (_e, args: SearchSendersArgs) =>
+    searchSendersByQuery(args.query, args.monthsBack),
   );
 
   ipcMain.handle(IPC_CHANNELS.THREADS_LIST_FOR_ENTITY, (_e, entityId: string) =>

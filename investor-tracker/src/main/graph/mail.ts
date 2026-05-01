@@ -149,6 +149,60 @@ export const fetchMailDelta = async (options: FetchMailOptions): Promise<Message
   return inserted;
 };
 
+export interface InvestorSenderCandidate {
+  email: string;
+  displayName: string | null;
+  messageCount: number;
+  lastSeen: string;
+}
+
+export const searchSendersByQuery = async (
+  query: string,
+  monthsBack: number,
+): Promise<InvestorSenderCandidate[]> => {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - monthsBack);
+  const cutoffMs = cutoff.getTime();
+
+  const escaped = trimmed.replace(/"/g, '\\"');
+  const search = encodeURIComponent(`"from:${escaped}"`);
+  const select = encodeURIComponent("id,from,sender,receivedDateTime");
+  const url = `/me/messages?$search=${search}&$top=200&$select=${select}`;
+
+  const page = await graphFetch<GraphPage<GraphMessage>>(url);
+  const byEmail = new Map<string, InvestorSenderCandidate>();
+  for (const msg of page.value) {
+    const received = msg.receivedDateTime;
+    if (!received || new Date(received).getTime() < cutoffMs) continue;
+    const email =
+      msg.from?.emailAddress?.address ?? msg.sender?.emailAddress?.address ?? "";
+    if (!email) continue;
+    const name =
+      msg.from?.emailAddress?.name ?? msg.sender?.emailAddress?.name ?? null;
+    const key = email.toLowerCase();
+    const existing = byEmail.get(key);
+    if (existing) {
+      existing.messageCount += 1;
+      if (received > existing.lastSeen) existing.lastSeen = received;
+      if (!existing.displayName && name) existing.displayName = name;
+    } else {
+      byEmail.set(key, {
+        email,
+        displayName: name,
+        messageCount: 1,
+        lastSeen: received,
+      });
+    }
+  }
+  return [...byEmail.values()].sort(
+    (a, b) =>
+      b.messageCount - a.messageCount ||
+      b.lastSeen.localeCompare(a.lastSeen),
+  );
+};
+
 export interface BackfillForInvestorOptions {
   emails: string[];
   monthsBack: number;
