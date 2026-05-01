@@ -11,6 +11,7 @@ export const Dashboard = (): JSX.Element => {
   const [pending, setPending] = useState<PendingReview[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [searchDraft, setSearchDraft] = useState<string>("");
+  const [keywordsDraft, setKeywordsDraft] = useState<string>("");
   const [savingContext, setSavingContext] = useState<boolean>(false);
   const [running, setRunning] = useState<JobLabel | null>(null);
   const [status, setStatus] = useState<string>("");
@@ -27,22 +28,38 @@ export const Dashboard = (): JSX.Element => {
     setPending(p);
     setSettings(s);
     setSearchDraft(s.investorSearchContext);
+    setKeywordsDraft(s.searchKeywords.join("\n"));
   };
 
   useEffect(() => {
     void refresh();
   }, []);
 
+  const parseKeywords = (text: string): string[] =>
+    text
+      .split("\n")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
   const saveContext = async (): Promise<void> => {
     setSavingContext(true);
     try {
       const updated = await invoke<Settings>(IPC_CHANNELS.SETTINGS_UPDATE, {
         investorSearchContext: searchDraft,
+        searchKeywords: parseKeywords(keywordsDraft),
       });
       setSettings(updated);
     } finally {
       setSavingContext(false);
     }
+  };
+
+  const isContextDirty = (): boolean => {
+    if (!settings) return false;
+    if (searchDraft !== settings.investorSearchContext) return true;
+    const parsed = parseKeywords(keywordsDraft);
+    if (parsed.length !== settings.searchKeywords.length) return true;
+    return parsed.some((k, i) => k !== settings.searchKeywords[i]);
   };
 
   const runJob = async (
@@ -52,7 +69,7 @@ export const Dashboard = (): JSX.Element => {
       | typeof IPC_CHANNELS.JOBS_RUN_POLL_AND_CLASSIFY,
     label: JobLabel,
   ): Promise<void> => {
-    if (label !== "poller" && settings && searchDraft !== settings.investorSearchContext) {
+    if (label !== "poller" && isContextDirty()) {
       await saveContext();
     }
     setRunning(label);
@@ -80,8 +97,7 @@ export const Dashboard = (): JSX.Element => {
       <div className="card">
         <h3>Investor search context</h3>
         <div className="muted" style={{ marginBottom: 8 }}>
-          Describe the kind of investors you&apos;re looking for. Claude scans newly
-          polled emails and flags senders matching this description.
+          Describe the kind of investors you&apos;re looking for.
         </div>
         <div className="form-group">
           <textarea
@@ -92,15 +108,32 @@ export const Dashboard = (): JSX.Element => {
             value={searchDraft}
             onChange={(ev) => setSearchDraft(ev.target.value)}
             onBlur={() => {
-              if (settings && searchDraft !== settings.investorSearchContext) {
-                void saveContext();
-              }
+              if (isContextDirty()) void saveContext();
+            }}
+          />
+        </div>
+
+        <h4 style={{ marginTop: 8 }}>Keywords (one per line)</h4>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Specific words or phrases Claude should look for in subject, body, or
+          sender info.
+        </div>
+        <div className="form-group">
+          <textarea
+            rows={5}
+            placeholder={
+              "trade finance\nprivate credit\nfamily office\nLP commitment"
+            }
+            value={keywordsDraft}
+            onChange={(ev) => setKeywordsDraft(ev.target.value)}
+            onBlur={() => {
+              if (isContextDirty()) void saveContext();
             }}
           />
         </div>
         <button
           className="btn secondary"
-          disabled={savingContext || !settings || searchDraft === settings.investorSearchContext}
+          disabled={savingContext || !isContextDirty()}
           onClick={() => void saveContext()}
         >
           {savingContext ? "Saving..." : "Save context"}

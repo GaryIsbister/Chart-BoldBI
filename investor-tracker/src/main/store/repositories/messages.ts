@@ -204,6 +204,76 @@ export const listMessagesByEmail = (email: string, limit = 50): Message[] => {
   ).map(rowToMessage);
 };
 
+export const backfillMessagesByEmail = (
+  email: string,
+  entityId: string,
+  contactId: string,
+): { messages: number; threads: number } => {
+  const db = getDb();
+  const msgRes = db
+    .prepare(
+      `UPDATE messages
+       SET entity_id = ?, contact_id = ?
+       WHERE LOWER(from_email) = LOWER(?)`,
+    )
+    .run(entityId, contactId, email);
+  const threadRes = db
+    .prepare(
+      `UPDATE threads
+       SET entity_id = ?
+       WHERE entity_id IS NULL
+         AND id IN (
+           SELECT DISTINCT thread_id FROM messages
+           WHERE LOWER(from_email) = LOWER(?) AND thread_id IS NOT NULL
+         )`,
+    )
+    .run(entityId, email);
+  return {
+    messages: msgRes.changes,
+    threads: threadRes.changes,
+  };
+};
+
+export interface SenderCandidate {
+  email: string;
+  displayName: string | null;
+  messageCount: number;
+  lastSeen: string;
+}
+
+export const findSendersByName = (query: string, limit = 20): SenderCandidate[] => {
+  if (!query.trim()) return [];
+  const db = getDb();
+  const like = `%${query.trim()}%`;
+  const rows = db
+    .prepare(
+      `SELECT
+         from_email AS email,
+         from_name AS display_name,
+         COUNT(*) AS message_count,
+         MAX(received_at) AS last_seen
+       FROM messages
+       WHERE (from_name LIKE ? COLLATE NOCASE OR from_email LIKE ? COLLATE NOCASE)
+         AND from_email IS NOT NULL
+         AND is_from_us = 0
+       GROUP BY from_email
+       ORDER BY message_count DESC, last_seen DESC
+       LIMIT ?`,
+    )
+    .all(like, like, limit) as Array<{
+    email: string;
+    display_name: string | null;
+    message_count: number;
+    last_seen: string;
+  }>;
+  return rows.map((r) => ({
+    email: r.email,
+    displayName: r.display_name,
+    messageCount: r.message_count,
+    lastSeen: r.last_seen,
+  }));
+};
+
 export const listRecentUnclassifiedMessages = (limit = 200): Message[] => {
   const db = getDb();
   return (

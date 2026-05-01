@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { invoke } from "../api";
-import { IPC_CHANNELS } from "@shared/ipc";
+import { IPC_CHANNELS, type SenderCandidate } from "@shared/ipc";
 import {
   PIPELINE_STAGES,
   type ActionItem,
@@ -31,6 +31,13 @@ export const InvestorDetail = (): JSX.Element => {
     ownerSide: ActionItemOwner;
     dueDate: string;
   }>({ description: "", ownerSide: "us", dueDate: "" });
+  const [newContact, setNewContact] = useState<{ email: string; name: string }>({
+    email: "",
+    name: "",
+  });
+  const [lookupQuery, setLookupQuery] = useState<string>("");
+  const [lookupResults, setLookupResults] = useState<SenderCandidate[] | null>(null);
+  const [lookupRunning, setLookupRunning] = useState<boolean>(false);
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -99,6 +106,43 @@ export const InvestorDetail = (): JSX.Element => {
     await refresh();
   };
 
+  const addContact = async (): Promise<void> => {
+    if (!id || !newContact.email.trim()) return;
+    await invoke(IPC_CHANNELS.CONTACTS_CREATE, {
+      entityId: id,
+      email: newContact.email.trim(),
+      displayName: newContact.name.trim() || null,
+    });
+    setNewContact({ email: "", name: "" });
+    await refresh();
+  };
+
+  const runLookup = async (): Promise<void> => {
+    if (!lookupQuery.trim()) return;
+    setLookupRunning(true);
+    try {
+      const results = await invoke<SenderCandidate[]>(
+        IPC_CHANNELS.CONTACTS_FIND_BY_NAME,
+        lookupQuery.trim(),
+      );
+      setLookupResults(results);
+    } finally {
+      setLookupRunning(false);
+    }
+  };
+
+  const linkCandidate = async (candidate: SenderCandidate): Promise<void> => {
+    if (!id) return;
+    await invoke(IPC_CHANNELS.CONTACTS_CREATE, {
+      entityId: id,
+      email: candidate.email,
+      displayName: candidate.displayName,
+    });
+    setLookupQuery("");
+    setLookupResults(null);
+    await refresh();
+  };
+
   if (!id) return <div>No investor selected.</div>;
   if (!entity) return <div>Loading...</div>;
 
@@ -155,6 +199,100 @@ export const InvestorDetail = (): JSX.Element => {
             </tbody>
           </table>
         )}
+
+        <h4 style={{ marginTop: 16 }}>Find contact by name</h4>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Search the emails you&apos;ve already polled for a sender by name. Pick
+          one to link.
+        </div>
+        <div className="row">
+          <div style={{ flex: 3 }}>
+            <input
+              value={lookupQuery}
+              onChange={(e) => setLookupQuery(e.target.value)}
+              placeholder="e.g. Sebastian"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void runLookup();
+              }}
+            />
+          </div>
+          <button
+            className="btn secondary"
+            disabled={lookupRunning || !lookupQuery.trim()}
+            onClick={() => void runLookup()}
+            style={{ flex: "0 0 auto" }}
+          >
+            {lookupRunning ? "Searching..." : "Search emails"}
+          </button>
+        </div>
+        {lookupResults !== null && (
+          <div style={{ marginTop: 8 }}>
+            {lookupResults.length === 0 ? (
+              <div className="muted">No senders match &quot;{lookupQuery}&quot;.</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Messages</th>
+                    <th>Last seen</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lookupResults.map((c) => (
+                    <tr key={c.email}>
+                      <td>{c.displayName ?? "—"}</td>
+                      <td>{c.email}</td>
+                      <td>{c.messageCount}</td>
+                      <td>{new Date(c.lastSeen).toLocaleDateString()}</td>
+                      <td>
+                        <button
+                          className="btn secondary"
+                          onClick={() => void linkCandidate(c)}
+                        >
+                          Link
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        <h4 style={{ marginTop: 16 }}>Add contact manually</h4>
+        <div className="row">
+          <div style={{ flex: 2 }}>
+            <label>Email</label>
+            <input
+              value={newContact.email}
+              onChange={(e) =>
+                setNewContact({ ...newContact, email: e.target.value })
+              }
+              placeholder="person@firm.com"
+            />
+          </div>
+          <div style={{ flex: 2 }}>
+            <label>Name (optional)</label>
+            <input
+              value={newContact.name}
+              onChange={(e) =>
+                setNewContact({ ...newContact, name: e.target.value })
+              }
+            />
+          </div>
+        </div>
+        <button
+          className="btn secondary"
+          disabled={!newContact.email.trim()}
+          onClick={() => void addContact()}
+          style={{ marginTop: 8 }}
+        >
+          Add contact
+        </button>
       </div>
 
       <div className="card">

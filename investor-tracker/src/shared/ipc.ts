@@ -25,11 +25,14 @@ export const IPC_CHANNELS = {
   // Entities
   ENTITIES_LIST: "entities:list",
   ENTITIES_GET: "entities:get",
+  ENTITIES_CREATE: "entities:create",
   ENTITIES_UPDATE_STAGE: "entities:updateStage",
   ENTITIES_UPDATE_NOTES: "entities:updateNotes",
 
   // Contacts
   CONTACTS_LIST_FOR_ENTITY: "contacts:listForEntity",
+  CONTACTS_CREATE: "contacts:create",
+  CONTACTS_FIND_BY_NAME: "contacts:findByName",
 
   // Threads + messages
   THREADS_LIST_FOR_ENTITY: "threads:listForEntity",
@@ -86,6 +89,28 @@ export interface UpdateEntityStageArgs {
 export interface UpdateEntityNotesArgs {
   id: string;
   notes: string;
+}
+
+export interface CreateEntityArgs {
+  name: string;
+  domain?: string | null;
+  pipelineStage?: PipelineStage;
+  notes?: string | null;
+  contactEmails?: string[];
+}
+
+export interface CreateContactArgs {
+  entityId: string;
+  email: string;
+  displayName?: string | null;
+  title?: string | null;
+}
+
+export interface SenderCandidate {
+  email: string;
+  displayName: string | null;
+  messageCount: number;
+  lastSeen: string;
 }
 
 export type {

@@ -177,6 +177,29 @@ export const Settings = (): JSX.Element => {
             onChange={(e) => void update({ investorSearchContext: e.target.value })}
           />
         </div>
+
+        <h4 style={{ marginTop: 16 }}>Keywords</h4>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          One per line. Claude flags any email whose subject, body, or sender
+          plausibly relates to any of these.
+        </div>
+        <div className="form-group">
+          <textarea
+            rows={6}
+            placeholder={
+              "trade finance\nprivate credit\nfamily office\nfund of funds\nLP commitment\nallocator"
+            }
+            value={settings.searchKeywords.join("\n")}
+            onChange={(e) =>
+              void update({
+                searchKeywords: e.target.value
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0),
+              })
+            }
+          />
+        </div>
       </div>
 
       <div className="card">

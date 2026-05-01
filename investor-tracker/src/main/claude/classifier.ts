@@ -13,13 +13,24 @@ export interface ClassifierResult {
 interface ClassifierContext {
   message: Message;
   searchContext: string;
+  searchKeywords: string[];
   knownEntities: string[];
 }
 
-const buildSystemPrompt = (searchContext: string): string => {
+const buildSystemPrompt = (
+  searchContext: string,
+  searchKeywords: string[],
+): string => {
   const trimmed = searchContext.trim();
-  const userBlock = trimmed.length > 0
+  const contextBlock = trimmed.length > 0
     ? `\n\nThe user is specifically looking for messages matching this description:\n"""\n${trimmed}\n"""\nA sender qualifies as an investor only if the message could plausibly be from someone matching this description. If the message has no relation to that description, return is_investor=false.`
+    : "";
+
+  const cleanedKeywords = searchKeywords
+    .map((k) => k.trim())
+    .filter((k) => k.length > 0);
+  const keywordBlock = cleanedKeywords.length > 0
+    ? `\n\nKeywords/phrases that strongly indicate an investor match (case-insensitive, partial matches OK):\n${cleanedKeywords.map((k) => `- ${k}`).join("\n")}\nIf the message subject, body, sender domain, or sender name plausibly relates to ANY of these keywords/topics, weight it toward is_investor=true and bump confidence accordingly.`
     : "";
 
   return `You help a fundraising team identify which inbound emails and Teams messages are from prospective investors (LPs, GPs, family offices, allocators, advisors representing one) versus general business correspondence.
@@ -28,7 +39,7 @@ Given a single message and the team's search context, decide:
 1. Is the sender plausibly an investor matching the search context?
 2. Which firm/entity name does the sender belong to (use a stable canonical name like "Swedfund" not "Mr. X from Swedfund").
 3. Confidence in [0, 1].
-4. One- or two-sentence reasoning.${userBlock}
+4. One- or two-sentence reasoning.${contextBlock}${keywordBlock}
 
 Output JSON ONLY with these keys: is_investor (bool), proposed_entity_name (string), confidence (number), reasoning (string).`;
 };
@@ -62,7 +73,7 @@ export const classifyMessage = async (
   const response = await claude.messages.create({
     model: settings.classifierModel,
     max_tokens: 400,
-    system: buildSystemPrompt(ctx.searchContext),
+    system: buildSystemPrompt(ctx.searchContext, ctx.searchKeywords),
     messages: [{ role: "user", content: buildUserPrompt(ctx) }],
   });
 

@@ -30,6 +30,7 @@ export const runDailyClassifier = async (): Promise<DailyClassifierResult> => {
   const messages = listRecentUnclassifiedMessages(200);
   const knownEntities = listEntities().map((e) => e.name);
   const searchContext = settings.investorSearchContext;
+  const searchKeywords = settings.searchKeywords;
 
   for (const message of messages) {
     try {
@@ -51,6 +52,7 @@ export const runDailyClassifier = async (): Promise<DailyClassifierResult> => {
       const result = await classifyMessage({
         message,
         searchContext,
+        searchKeywords,
         knownEntities,
       });
 

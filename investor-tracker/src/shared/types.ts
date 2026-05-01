@@ -142,5 +142,6 @@ export const Settings = z.object({
   microsoftTenantId: z.string().default("cde94aa3-9a51-4e52-89b9-da9c8a63a1e9"),
   dailyClassifierHourLocal: z.number().int().min(0).max(23).default(7),
   investorSearchContext: z.string().default(""),
+  searchKeywords: z.array(z.string()).default([]),
 });
 export type Settings = z.infer<typeof Settings>;

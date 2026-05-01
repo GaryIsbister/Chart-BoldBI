@@ -3,6 +3,8 @@ import {
   IPC_CHANNELS,
   type AuthStatus,
   type CreateActionItemArgs,
+  type CreateContactArgs,
+  type CreateEntityArgs,
   type DecidePendingReviewArgs,
   type UpdateActionItemStatusArgs,
   type UpdateEntityNotesArgs,
@@ -21,6 +23,8 @@ import {
 } from "../store/repositories/entities";
 import { listContactsForEntity, upsertContact } from "../store/repositories/contacts";
 import {
+  backfillMessagesByEmail,
+  findSendersByName,
   listMessagesForThread,
   listThreadsForEntity,
   updateMessageEntity,
@@ -116,9 +120,41 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.ENTITIES_UPDATE_NOTES, (_e, args: UpdateEntityNotesArgs) =>
     updateEntityNotes(args.id, args.notes),
   );
+  ipcMain.handle(IPC_CHANNELS.ENTITIES_CREATE, (_e, args: CreateEntityArgs) => {
+    const entity = createEntity({
+      name: args.name,
+      domain: args.domain ?? null,
+      pipelineStage: args.pipelineStage,
+      notes: args.notes ?? null,
+    });
+    for (const email of args.contactEmails ?? []) {
+      const trimmed = email.trim();
+      if (!trimmed) continue;
+      const contact = upsertContact({
+        entityId: entity.id,
+        email: trimmed,
+        displayName: null,
+      });
+      backfillMessagesByEmail(trimmed, entity.id, contact.id);
+    }
+    return entity;
+  });
 
   ipcMain.handle(IPC_CHANNELS.CONTACTS_LIST_FOR_ENTITY, (_e, entityId: string) =>
     listContactsForEntity(entityId),
+  );
+  ipcMain.handle(IPC_CHANNELS.CONTACTS_CREATE, (_e, args: CreateContactArgs) => {
+    const contact = upsertContact({
+      entityId: args.entityId,
+      email: args.email,
+      displayName: args.displayName ?? null,
+      title: args.title ?? null,
+    });
+    backfillMessagesByEmail(args.email, args.entityId, contact.id);
+    return contact;
+  });
+  ipcMain.handle(IPC_CHANNELS.CONTACTS_FIND_BY_NAME, (_e, query: string) =>
+    findSendersByName(query, 20),
   );
 
   ipcMain.handle(IPC_CHANNELS.THREADS_LIST_FOR_ENTITY, (_e, entityId: string) =>

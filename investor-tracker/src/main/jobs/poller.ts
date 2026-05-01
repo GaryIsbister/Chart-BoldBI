@@ -5,6 +5,7 @@ import type { Message } from "@shared/types";
 import { findContactByEmail } from "../store/repositories/contacts";
 import { updateMessageContact, updateMessageEntity } from "../store/repositories/messages";
 import { runDailyClassifier, type DailyClassifierResult } from "./dailyClassifier";
+import { runThreadRefresher, type ThreadRefresherResult } from "./threadRefresher";
 
 export interface PollerResult {
   newMail: number;
@@ -14,6 +15,7 @@ export interface PollerResult {
 
 export interface PollAndClassifyResult extends PollerResult {
   classifier: DailyClassifierResult | null;
+  threadAnalysis: ThreadRefresherResult | null;
 }
 
 export const runPoller = async (): Promise<PollerResult> => {
@@ -55,14 +57,26 @@ const attachKnownContacts = (messages: Message[]): void => {
 
 export const runPollAndClassify = async (): Promise<PollAndClassifyResult> => {
   const pollResult = await runPoller();
+  let classifier: DailyClassifierResult | null = null;
+  let threadAnalysis: ThreadRefresherResult | null = null;
+  const errors = [...pollResult.errors];
+
   try {
-    const classifier = await runDailyClassifier();
-    return { ...pollResult, classifier };
+    classifier = await runDailyClassifier();
   } catch (e) {
-    return {
-      ...pollResult,
-      classifier: null,
-      errors: [...pollResult.errors, `classifier: ${(e as Error).message}`],
-    };
+    errors.push(`classifier: ${(e as Error).message}`);
   }
+
+  try {
+    threadAnalysis = await runThreadRefresher();
+  } catch (e) {
+    errors.push(`threadAnalysis: ${(e as Error).message}`);
+  }
+
+  return {
+    ...pollResult,
+    errors,
+    classifier,
+    threadAnalysis,
+  };
 };
