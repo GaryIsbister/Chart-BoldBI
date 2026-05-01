@@ -43,6 +43,7 @@ export const fetchTeamsDelta = async (): Promise<Message[]> => {
   const inserted: Message[] = [];
 
   const chats = await graphFetch<GraphPage<GraphChat>>("/me/chats?$top=50");
+  const skippedChats: string[] = [];
   for (const chat of chats.value) {
     const since = getCursor(teamsCursorKey(chat.id));
     const filter = since
@@ -53,6 +54,7 @@ export const fetchTeamsDelta = async (): Promise<Message[]> => {
     let pages = 0;
     let newestSeen: string | null = null;
 
+    try {
     while (url && pages < 3) {
       const page: GraphPage<GraphChatMessage> = await graphFetch<GraphPage<GraphChatMessage>>(url);
       for (const msg of page.value) {
@@ -98,6 +100,17 @@ export const fetchTeamsDelta = async (): Promise<Message[]> => {
       pages += 1;
     }
     if (newestSeen) setCursor(teamsCursorKey(chat.id), newestSeen);
+    } catch (e) {
+      const message = (e as Error).message ?? "";
+      if (message.includes("403") || message.includes("404")) {
+        skippedChats.push(chat.id);
+        continue;
+      }
+      throw e;
+    }
+  }
+  if (skippedChats.length > 0) {
+    console.log(`[teams] skipped ${skippedChats.length} inaccessible chats (403/404)`);
   }
   return inserted;
 };
