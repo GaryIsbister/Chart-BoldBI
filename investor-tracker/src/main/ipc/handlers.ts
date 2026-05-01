@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow, ipcMain, dialog, shell, clipboard } from "electron";
 import { IPC_CHANNELS, type AuthStatus, type DecidePendingReviewArgs, type UpdateActionItemStatusArgs, type UpdateEntityNotesArgs, type UpdateEntityStageArgs } from "@shared/ipc";
 import { KEYCHAIN_KEYS, keychain } from "../keychain";
 import { resetClaudeClient } from "../claude/client";
@@ -46,7 +46,31 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
     const win = getWindow();
     return signIn({
       onDeviceCode: (prompt) => {
+        console.log("\n=== Microsoft device code ===");
+        console.log(prompt.message);
+        console.log("===\n");
         win?.webContents.send("auth:deviceCode", prompt);
+        clipboard.writeText(prompt.userCode);
+        if (win) {
+          void dialog
+            .showMessageBox(win, {
+              type: "info",
+              title: "Sign in to Microsoft",
+              message: `Code: ${prompt.userCode}`,
+              detail:
+                `${prompt.message}\n\nThe code has been copied to your clipboard. ` +
+                `Click "Open browser" to start, paste the code, and sign in. ` +
+                `This dialog will stay open — close it once sign-in finishes.`,
+              buttons: ["Open browser", "Close"],
+              defaultId: 0,
+              cancelId: 1,
+            })
+            .then((res) => {
+              if (res.response === 0) {
+                void shell.openExternal(prompt.verificationUri);
+              }
+            });
+        }
       },
     });
   });
