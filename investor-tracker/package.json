@@ -5,6 +5,7 @@
   "description": "Desktop app that tracks investor communications across Outlook and Teams, classified by Claude.",
   "main": "dist/main/index.js",
   "scripts": {
+    "postinstall": "electron-builder install-app-deps",
     "dev": "concurrently -k -n main,renderer -c blue,magenta \"pnpm dev:main\" \"pnpm dev:renderer\"",
     "dev:main": "tsc -p tsconfig.main.json --watch --preserveWatchOutput",
     "dev:renderer": "vite",
@@ -13,6 +14,7 @@
     "build:renderer": "vite build",
     "start": "electron .",
     "package": "pnpm build && electron-builder",
+    "package:win": "pnpm build && electron-builder --win --x64",
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit"
   },
   "dependencies": {
@@ -49,11 +51,23 @@
       "dist/**/*",
       "package.json"
     ],
+    "extraResources": [
+      "config.example.json"
+    ],
     "mac": {
       "category": "public.app-category.business"
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Investor Tracker"
     }
   }
 }

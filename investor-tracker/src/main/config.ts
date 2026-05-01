@@ -29,6 +29,8 @@ export function loadConfig(): AppConfig {
     path.join(app.getPath("userData"), "config.json"),
     path.resolve(process.cwd(), "config.local.json"),
     path.resolve(process.cwd(), "config.example.json"),
+    path.join(process.resourcesPath ?? "", "config.example.json"),
+    path.join(app.getAppPath(), "config.example.json"),
   ];
 
   for (const file of candidates) {
