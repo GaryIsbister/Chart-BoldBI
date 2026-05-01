@@ -33,7 +33,9 @@ export const runThreadRefresher = async (
       applyAnalysis(row.id, row.entity_id, analysis);
       refreshed += 1;
     } catch (e) {
-      errors.push(`thread ${row.id}: ${(e as Error).message}`);
+      const msg = (e as Error).message;
+      console.error(`[threadRefresher] thread ${row.id}: ${msg}`);
+      errors.push(`thread ${row.id}: ${msg}`);
     }
   }
 
@@ -59,7 +61,9 @@ export const runThreadRefresherForEntity = async (
       applyAnalysis(row.id, entityId, analysis);
       refreshed += 1;
     } catch (e) {
-      errors.push(`thread ${row.id}: ${(e as Error).message}`);
+      const msg = (e as Error).message;
+      console.error(`[threadRefresher] thread ${row.id}: ${msg}`);
+      errors.push(`thread ${row.id}: ${msg}`);
     }
   }
 
