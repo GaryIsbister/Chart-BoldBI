@@ -94,6 +94,7 @@ export const ActionItem = z.object({
   resolvedByMessageId: z.string().uuid().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  sourceDate: z.string().nullable().optional(),
 });
 export type ActionItem = z.infer<typeof ActionItem>;
 

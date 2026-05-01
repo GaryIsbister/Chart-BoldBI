@@ -9,7 +9,7 @@ import {
   type Entity,
 } from "@shared/types";
 
-type SortKey = "investor" | "owner" | "description" | "due" | "status" | "updated";
+type SortKey = "investor" | "owner" | "description" | "due" | "status" | "source" | "updated";
 type SortDir = "asc" | "desc";
 
 interface Filters {
@@ -102,6 +102,9 @@ export const Actions = (): JSX.Element => {
           break;
         case "status":
           cmp = a.status.localeCompare(b.status);
+          break;
+        case "source":
+          cmp = (a.sourceDate ?? "").localeCompare(b.sourceDate ?? "");
           break;
         case "updated":
           cmp = a.updatedAt.localeCompare(b.updatedAt);
@@ -231,6 +234,9 @@ export const Actions = (): JSX.Element => {
               <th onClick={() => toggleSort("status")} style={headerStyle}>
                 Status{arrow("status")}
               </th>
+              <th onClick={() => toggleSort("source")} style={headerStyle}>
+                Source email{arrow("source")}
+              </th>
               <th onClick={() => toggleSort("updated")} style={headerStyle}>
                 Updated{arrow("updated")}
               </th>
@@ -270,6 +276,11 @@ export const Actions = (): JSX.Element => {
                   </td>
                   <td onClick={() => navigate(`/investors/${a.entityId}`)}>
                     {a.status}
+                  </td>
+                  <td onClick={() => navigate(`/investors/${a.entityId}`)}>
+                    {a.sourceDate
+                      ? new Date(a.sourceDate).toLocaleDateString()
+                      : "—"}
                   </td>
                   <td onClick={() => navigate(`/investors/${a.entityId}`)}>
                     {new Date(a.updatedAt).toLocaleDateString()}

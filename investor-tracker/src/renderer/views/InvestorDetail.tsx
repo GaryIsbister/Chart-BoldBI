@@ -358,6 +358,7 @@ export const InvestorDetail = (): JSX.Element => {
                 <th>Owner</th>
                 <th>Description</th>
                 <th>Due</th>
+                <th>Source email</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -375,6 +376,11 @@ export const InvestorDetail = (): JSX.Element => {
                   <td>{a.ownerSide}</td>
                   <td>{a.description}</td>
                   <td>{a.dueDate ?? "—"}</td>
+                  <td>
+                    {a.sourceDate
+                      ? new Date(a.sourceDate).toLocaleDateString()
+                      : "—"}
+                  </td>
                   <td>
                     <select
                       value={a.status}

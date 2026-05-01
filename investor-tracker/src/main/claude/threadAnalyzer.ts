@@ -107,11 +107,14 @@ export const applyAnalysis = (
     });
   }
 
+  const messages = listMessagesForThread(threadId);
+  const latestMessage = messages[messages.length - 1] ?? null;
+
   for (const item of analysis.newActionItems) {
     createActionItem({
       entityId,
       threadId,
-      sourceMessageId: null,
+      sourceMessageId: latestMessage?.id ?? null,
       ownerSide: item.ownerSide,
       description: item.description,
       dueDate: item.dueDate ?? null,

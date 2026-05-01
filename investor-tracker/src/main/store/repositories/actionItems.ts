@@ -19,6 +19,7 @@ interface ActionItemRow {
   resolved_by_message_id: string | null;
   created_at: string;
   updated_at: string;
+  source_date: string | null;
 }
 
 const rowToActionItem = (row: ActionItemRow): ActionItem => ({
@@ -34,7 +35,16 @@ const rowToActionItem = (row: ActionItemRow): ActionItem => ({
   resolvedByMessageId: row.resolved_by_message_id,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  sourceDate: row.source_date,
 });
+
+const SELECT_WITH_SOURCE = `
+  SELECT a.*,
+    COALESCE(m.received_at, t.last_message_at) AS source_date
+  FROM action_items a
+  LEFT JOIN messages m ON a.source_message_id = m.id
+  LEFT JOIN threads t ON a.thread_id = t.id
+`;
 
 export interface CreateActionItemInput {
   entityId: string;
@@ -69,9 +79,9 @@ export const createActionItem = (input: CreateActionItemInput): ActionItem => {
 
 export const getActionItem = (id: string): ActionItem | null => {
   const db = getDb();
-  const row = db.prepare("SELECT * FROM action_items WHERE id = ?").get(id) as
-    | ActionItemRow
-    | undefined;
+  const row = db
+    .prepare(`${SELECT_WITH_SOURCE} WHERE a.id = ?`)
+    .get(id) as ActionItemRow | undefined;
   return row ? rowToActionItem(row) : null;
 };
 
@@ -83,15 +93,15 @@ export const listActionItems = (filter?: {
   const clauses: string[] = [];
   const params: unknown[] = [];
   if (filter?.entityId) {
-    clauses.push("entity_id = ?");
+    clauses.push("a.entity_id = ?");
     params.push(filter.entityId);
   }
   if (filter?.status) {
-    clauses.push("status = ?");
+    clauses.push("a.status = ?");
     params.push(filter.status);
   }
   const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
-  const sql = `SELECT * FROM action_items ${where} ORDER BY created_at DESC`;
+  const sql = `${SELECT_WITH_SOURCE} ${where} ORDER BY a.created_at DESC`;
   return (db.prepare(sql).all(...params) as ActionItemRow[]).map(rowToActionItem);
 };
 
