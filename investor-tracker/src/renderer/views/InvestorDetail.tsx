@@ -176,10 +176,11 @@ export const InvestorDetail = (): JSX.Element => {
         IPC_CHANNELS.JOBS_REFRESH_ENTITY_THREADS,
         id,
       );
-      setAnalyzeStatus(
-        `Re-analyzed ${result.refreshed} thread(s)` +
-          (result.errors.length > 0 ? ` · ${result.errors.length} error(s)` : ""),
-      );
+      let msg = `Re-analyzed ${result.refreshed} thread(s)`;
+      if (result.errors.length > 0) {
+        msg += ` · ${result.errors.length} error(s) — first: ${result.errors[0]}`;
+      }
+      setAnalyzeStatus(msg);
       await refresh();
     } catch (e) {
       setAnalyzeStatus(`Failed: ${(e as Error).message}`);
