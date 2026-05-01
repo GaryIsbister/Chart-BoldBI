@@ -53,6 +53,7 @@ export const InvestorDetail = (): JSX.Element => {
   const [lookupRunning, setLookupRunning] = useState<boolean>(false);
   const [analyzing, setAnalyzing] = useState<boolean>(false);
   const [analyzeStatus, setAnalyzeStatus] = useState<string>("");
+  const [showManualContact, setShowManualContact] = useState<boolean>(false);
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -245,122 +246,6 @@ export const InvestorDetail = (): JSX.Element => {
             <div>{new Date(entity.updatedAt).toLocaleString()}</div>
           </div>
         </div>
-      </div>
-
-      <div className="card">
-        <h3>Contacts ({contacts.length})</h3>
-        {contacts.length === 0 ? (
-          <div className="muted">No contacts linked yet.</div>
-        ) : (
-          <table>
-            <thead>
-              <tr><th>Name</th><th>Email</th><th>Title</th></tr>
-            </thead>
-            <tbody>
-              {contacts.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.displayName ?? "—"}</td>
-                  <td>{c.email}</td>
-                  <td>{c.title ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        <h4 style={{ marginTop: 16 }}>Find contact by name</h4>
-        <div className="muted" style={{ marginBottom: 8 }}>
-          Search the emails you&apos;ve already polled for a sender by name. Pick
-          one to link.
-        </div>
-        <div className="row">
-          <div style={{ flex: 3 }}>
-            <input
-              value={lookupQuery}
-              onChange={(e) => setLookupQuery(e.target.value)}
-              placeholder="e.g. Sebastian"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void runLookup();
-              }}
-            />
-          </div>
-          <button
-            className="btn secondary"
-            disabled={lookupRunning || !lookupQuery.trim()}
-            onClick={() => void runLookup()}
-            style={{ flex: "0 0 auto" }}
-          >
-            {lookupRunning ? "Searching..." : "Search emails"}
-          </button>
-        </div>
-        {lookupResults !== null && (
-          <div style={{ marginTop: 8 }}>
-            {lookupResults.length === 0 ? (
-              <div className="muted">No senders match &quot;{lookupQuery}&quot;.</div>
-            ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Messages</th>
-                    <th>Last seen</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lookupResults.map((c) => (
-                    <tr key={c.email}>
-                      <td>{c.displayName ?? "—"}</td>
-                      <td>{c.email}</td>
-                      <td>{c.messageCount}</td>
-                      <td>{new Date(c.lastSeen).toLocaleDateString()}</td>
-                      <td>
-                        <button
-                          className="btn secondary"
-                          onClick={() => void linkCandidate(c)}
-                        >
-                          Link
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-
-        <h4 style={{ marginTop: 16 }}>Add contact manually</h4>
-        <div className="row">
-          <div style={{ flex: 2 }}>
-            <label>Email</label>
-            <input
-              value={newContact.email}
-              onChange={(e) =>
-                setNewContact({ ...newContact, email: e.target.value })
-              }
-              placeholder="person@firm.com"
-            />
-          </div>
-          <div style={{ flex: 2 }}>
-            <label>Name (optional)</label>
-            <input
-              value={newContact.name}
-              onChange={(e) =>
-                setNewContact({ ...newContact, name: e.target.value })
-              }
-            />
-          </div>
-        </div>
-        <button
-          className="btn secondary"
-          disabled={!newContact.email.trim()}
-          onClick={() => void addContact()}
-          style={{ marginTop: 8 }}
-        >
-          Add contact
-        </button>
       </div>
 
       <div className="card">
@@ -557,6 +442,133 @@ export const InvestorDetail = (): JSX.Element => {
               )}
             </div>
           ))
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Contacts ({contacts.length})</h3>
+        {contacts.length === 0 ? (
+          <div className="muted">No contacts linked yet.</div>
+        ) : (
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Title</th></tr>
+            </thead>
+            <tbody>
+              {contacts.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.displayName ?? "—"}</td>
+                  <td>{c.email}</td>
+                  <td>{c.title ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <h4 style={{ marginTop: 16 }}>Find contact by name</h4>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Search the emails you&apos;ve already polled for a sender by name. Pick
+          one to link.
+        </div>
+        <div className="row">
+          <div style={{ flex: 3 }}>
+            <input
+              value={lookupQuery}
+              onChange={(e) => setLookupQuery(e.target.value)}
+              placeholder="e.g. Sebastian"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void runLookup();
+              }}
+            />
+          </div>
+          <button
+            className="btn secondary"
+            disabled={lookupRunning || !lookupQuery.trim()}
+            onClick={() => void runLookup()}
+            style={{ flex: "0 0 auto" }}
+          >
+            {lookupRunning ? "Searching..." : "Search emails"}
+          </button>
+        </div>
+        {lookupResults !== null && (
+          <div style={{ marginTop: 8 }}>
+            {lookupResults.length === 0 ? (
+              <div className="muted">No senders match &quot;{lookupQuery}&quot;.</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Messages</th>
+                    <th>Last seen</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lookupResults.map((c) => (
+                    <tr key={c.email}>
+                      <td>{c.displayName ?? "—"}</td>
+                      <td>{c.email}</td>
+                      <td>{c.messageCount}</td>
+                      <td>{new Date(c.lastSeen).toLocaleDateString()}</td>
+                      <td>
+                        <button
+                          className="btn secondary"
+                          onClick={() => void linkCandidate(c)}
+                        >
+                          Link
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        <div style={{ marginTop: 16 }}>
+          <button
+            className="btn secondary"
+            onClick={() => setShowManualContact((v) => !v)}
+          >
+            {showManualContact ? "Hide manual entry ▲" : "Add contact manually ▼"}
+          </button>
+        </div>
+        {showManualContact && (
+          <div style={{ marginTop: 12 }}>
+            <div className="row">
+              <div style={{ flex: 2 }}>
+                <label>Email</label>
+                <input
+                  value={newContact.email}
+                  onChange={(e) =>
+                    setNewContact({ ...newContact, email: e.target.value })
+                  }
+                  placeholder="person@firm.com"
+                />
+              </div>
+              <div style={{ flex: 2 }}>
+                <label>Name (optional)</label>
+                <input
+                  value={newContact.name}
+                  onChange={(e) =>
+                    setNewContact({ ...newContact, name: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <button
+              className="btn"
+              disabled={!newContact.email.trim()}
+              onClick={() => void addContact()}
+              style={{ marginTop: 8 }}
+            >
+              Add contact
+            </button>
+          </div>
         )}
       </div>
 
