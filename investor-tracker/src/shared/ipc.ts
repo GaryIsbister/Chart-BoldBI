@@ -38,6 +38,7 @@ export const IPC_CHANNELS = {
   // Action items
   ACTION_ITEMS_LIST: "actionItems:list",
   ACTION_ITEMS_UPDATE_STATUS: "actionItems:updateStatus",
+  ACTION_ITEMS_CREATE: "actionItems:create",
 
   // Pending review
   PENDING_REVIEWS_LIST: "pendingReviews:list",
@@ -67,6 +68,13 @@ export interface DecidePendingReviewArgs {
 export interface UpdateActionItemStatusArgs {
   id: string;
   status: ActionItem["status"];
+}
+
+export interface CreateActionItemArgs {
+  entityId: string;
+  description: string;
+  ownerSide: ActionItem["ownerSide"];
+  dueDate?: string | null;
 }
 
 export interface UpdateEntityStageArgs {

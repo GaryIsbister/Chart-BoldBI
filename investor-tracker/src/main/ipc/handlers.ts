@@ -1,5 +1,13 @@
 import { BrowserWindow, ipcMain, dialog, shell, clipboard } from "electron";
-import { IPC_CHANNELS, type AuthStatus, type DecidePendingReviewArgs, type UpdateActionItemStatusArgs, type UpdateEntityNotesArgs, type UpdateEntityStageArgs } from "@shared/ipc";
+import {
+  IPC_CHANNELS,
+  type AuthStatus,
+  type CreateActionItemArgs,
+  type DecidePendingReviewArgs,
+  type UpdateActionItemStatusArgs,
+  type UpdateEntityNotesArgs,
+  type UpdateEntityStageArgs,
+} from "@shared/ipc";
 import { KEYCHAIN_KEYS, keychain } from "../keychain";
 import { resetClaudeClient } from "../claude/client";
 import { getSettings, updateSettings } from "../store/repositories/settings";
@@ -17,7 +25,7 @@ import {
   listThreadsForEntity,
   updateMessageEntity,
 } from "../store/repositories/messages";
-import { listActionItems, updateActionItemStatus } from "../store/repositories/actionItems";
+import { createActionItem, listActionItems, updateActionItemStatus } from "../store/repositories/actionItems";
 import {
   getPendingReview,
   listOpenPendingReviews,
@@ -125,6 +133,16 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   );
   ipcMain.handle(IPC_CHANNELS.ACTION_ITEMS_UPDATE_STATUS, (_e, args: UpdateActionItemStatusArgs) =>
     updateActionItemStatus(args.id, args.status, null),
+  );
+  ipcMain.handle(IPC_CHANNELS.ACTION_ITEMS_CREATE, (_e, args: CreateActionItemArgs) =>
+    createActionItem({
+      entityId: args.entityId,
+      threadId: null,
+      sourceMessageId: null,
+      ownerSide: args.ownerSide,
+      description: args.description,
+      dueDate: args.dueDate ?? null,
+    }),
   );
 
   ipcMain.handle(IPC_CHANNELS.PENDING_REVIEWS_LIST, () => listOpenPendingReviews());
