@@ -96,6 +96,35 @@ export const findOpenReviewByEmail = (email: string): PendingReview | null => {
   return row ? rowToPendingReview(row) : null;
 };
 
+export const findLatestReviewByEmail = (email: string): PendingReview | null => {
+  const db = getDb();
+  const row = db
+    .prepare(
+      "SELECT * FROM pending_reviews WHERE LOWER(email) = LOWER(?) ORDER BY COALESCE(decided_at, created_at) DESC LIMIT 1",
+    )
+    .get(email) as PendingReviewRow | undefined;
+  return row ? rowToPendingReview(row) : null;
+};
+
+export const listRejectedReviews = (): PendingReview[] => {
+  const db = getDb();
+  return (
+    db
+      .prepare(
+        "SELECT * FROM pending_reviews WHERE decision = 'reject' ORDER BY decided_at DESC",
+      )
+      .all() as PendingReviewRow[]
+  ).map(rowToPendingReview);
+};
+
+export const reopenPendingReview = (id: string): PendingReview | null => {
+  const db = getDb();
+  db.prepare(
+    "UPDATE pending_reviews SET decision = NULL, decided_at = NULL WHERE id = ?",
+  ).run(id);
+  return getPendingReview(id);
+};
+
 export const setPendingReviewDecision = (
   id: string,
   decision: PendingReviewDecision,

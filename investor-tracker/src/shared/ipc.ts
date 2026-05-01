@@ -48,6 +48,8 @@ export const IPC_CHANNELS = {
   // Pending review
   PENDING_REVIEWS_LIST: "pendingReviews:list",
   PENDING_REVIEWS_DECIDE: "pendingReviews:decide",
+  PENDING_REVIEWS_LIST_REJECTED: "pendingReviews:listRejected",
+  PENDING_REVIEWS_REOPEN: "pendingReviews:reopen",
 
   // Jobs
   JOBS_RUN_POLLER: "jobs:runPoller",

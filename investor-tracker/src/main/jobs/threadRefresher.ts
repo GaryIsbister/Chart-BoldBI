@@ -6,19 +6,26 @@ export interface ThreadRefresherResult {
   errors: string[];
 }
 
-export const runThreadRefresher = async (limit = 10): Promise<ThreadRefresherResult> => {
+export const runThreadRefresher = async (
+  options: { limit?: number } = {},
+): Promise<ThreadRefresherResult> => {
   const db = getDb();
   const errors: string[] = [];
   let refreshed = 0;
 
-  const rows = db
-    .prepare(
-      `SELECT id, entity_id FROM threads
+  const sql = options.limit
+    ? `SELECT id, entity_id FROM threads
        WHERE entity_id IS NOT NULL
        ORDER BY last_message_at DESC
-       LIMIT ?`,
-    )
-    .all(limit) as Array<{ id: string; entity_id: string }>;
+       LIMIT ?`
+    : `SELECT id, entity_id FROM threads
+       WHERE entity_id IS NOT NULL
+       ORDER BY last_message_at DESC`;
+  const rows = (
+    options.limit
+      ? db.prepare(sql).all(options.limit)
+      : db.prepare(sql).all()
+  ) as Array<{ id: string; entity_id: string }>;
 
   for (const row of rows) {
     try {

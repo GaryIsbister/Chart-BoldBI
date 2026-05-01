@@ -11,7 +11,11 @@ import {
   updateMessageEntity,
   updateThreadEntity,
 } from "../store/repositories/messages";
-import { createPendingReview, findOpenReviewByEmail } from "../store/repositories/pendingReviews";
+import {
+  createPendingReview,
+  findLatestReviewByEmail,
+  findOpenReviewByEmail,
+} from "../store/repositories/pendingReviews";
 import { getSettings } from "../store/repositories/settings";
 import { domainFromEmail } from "@shared/util";
 
@@ -34,6 +38,9 @@ export const runDailyClassifier = async (): Promise<DailyClassifierResult> => {
 
   for (const message of messages) {
     try {
+      const priorReview = findLatestReviewByEmail(message.fromEmail);
+      if (priorReview?.decision === "reject") continue;
+
       const domain = domainFromEmail(message.fromEmail);
       const existing = domain ? findEntityByDomain(domain) : null;
       if (existing) {

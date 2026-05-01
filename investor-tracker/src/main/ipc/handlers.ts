@@ -35,6 +35,8 @@ import { createActionItem, listActionItems, updateActionItemStatus } from "../st
 import {
   getPendingReview,
   listOpenPendingReviews,
+  listRejectedReviews,
+  reopenPendingReview,
   setPendingReviewDecision,
 } from "../store/repositories/pendingReviews";
 import { runPoller, runPollAndClassify } from "../jobs/poller";
@@ -189,6 +191,10 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   );
 
   ipcMain.handle(IPC_CHANNELS.PENDING_REVIEWS_LIST, () => listOpenPendingReviews());
+  ipcMain.handle(IPC_CHANNELS.PENDING_REVIEWS_LIST_REJECTED, () => listRejectedReviews());
+  ipcMain.handle(IPC_CHANNELS.PENDING_REVIEWS_REOPEN, (_e, id: string) =>
+    reopenPendingReview(id),
+  );
   ipcMain.handle(IPC_CHANNELS.PENDING_REVIEWS_DECIDE, (_e, args: DecidePendingReviewArgs) => {
     const review = getPendingReview(args.reviewId);
     if (!review) return null;

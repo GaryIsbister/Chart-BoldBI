@@ -16,16 +16,20 @@ interface RowEdit {
 }
 
 export const PendingReview = (): JSX.Element => {
+  const [tab, setTab] = useState<"open" | "rejected">("open");
   const [reviews, setReviews] = useState<PendingReviewItem[]>([]);
+  const [rejected, setRejected] = useState<PendingReviewItem[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [edits, setEdits] = useState<Record<string, RowEdit>>({});
 
   const refresh = async (): Promise<void> => {
-    const [list, ents] = await Promise.all([
+    const [list, rej, ents] = await Promise.all([
       invoke<PendingReviewItem[]>(IPC_CHANNELS.PENDING_REVIEWS_LIST),
+      invoke<PendingReviewItem[]>(IPC_CHANNELS.PENDING_REVIEWS_LIST_REJECTED),
       invoke<Entity[]>(IPC_CHANNELS.ENTITIES_LIST),
     ]);
     setReviews(list);
+    setRejected(rej);
     setEntities(ents);
     setEdits((prev) => {
       const next = { ...prev };
@@ -96,18 +100,70 @@ export const PendingReview = (): JSX.Element => {
     });
   };
 
+  const reopen = async (id: string): Promise<void> => {
+    await invoke(IPC_CHANNELS.PENDING_REVIEWS_REOPEN, id);
+    await refresh();
+    setTab("open");
+  };
+
+  const visibleReviews = tab === "open" ? reviews : rejected;
+
   return (
     <div>
       <h2>Pending Review</h2>
       <div className="muted" style={{ marginBottom: 12 }}>
         Each row is an email Claude flagged as a possible investor. Allocate it to
-        an existing investor or create a new one.
+        an existing investor, create a new one, or reject. Rejected senders won&apos;t
+        be re-classified on future polls.
       </div>
 
-      {reviews.length === 0 ? (
+      <div className="row" style={{ marginBottom: 12 }}>
+        <button
+          className={tab === "open" ? "btn" : "btn secondary"}
+          onClick={() => setTab("open")}
+          style={{ flex: "0 0 auto" }}
+        >
+          Open ({reviews.length})
+        </button>
+        <button
+          className={tab === "rejected" ? "btn" : "btn secondary"}
+          onClick={() => setTab("rejected")}
+          style={{ flex: "0 0 auto" }}
+        >
+          Rejected ({rejected.length})
+        </button>
+      </div>
+
+      {tab === "rejected" ? (
+        rejected.length === 0 ? (
+          <div className="card muted">No rejected senders yet.</div>
+        ) : (
+          rejected.map((r) => (
+            <div key={r.id} className="card">
+              <div className="row">
+                <div>
+                  <div style={{ fontWeight: 600 }}>{r.displayName ?? r.email}</div>
+                  <div className="muted">
+                    {r.email} · {r.domain ?? "no domain"} · rejected{" "}
+                    {r.decidedAt ? new Date(r.decidedAt).toLocaleDateString() : ""}
+                  </div>
+                </div>
+                <button
+                  className="btn secondary"
+                  onClick={() => void reopen(r.id)}
+                  style={{ flex: "0 0 auto" }}
+                >
+                  Re-open
+                </button>
+              </div>
+              <p className="muted" style={{ fontSize: 13 }}>{r.reasoning}</p>
+            </div>
+          ))
+        )
+      ) : visibleReviews.length === 0 ? (
         <div className="card muted">No reviews pending.</div>
       ) : (
-        reviews.map((r) => {
+        visibleReviews.map((r) => {
           const edit = edits[r.id];
           if (!edit) return null;
           return (

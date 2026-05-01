@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { invoke } from "../api";
 import { IPC_CHANNELS } from "@shared/ipc";
@@ -39,11 +39,28 @@ const categoryLabel = (c: EntityCategory): string => {
   }
 };
 
+type SortKey = "name" | "category" | "domain" | "stage" | "updated";
+type SortDir = "asc" | "desc";
+
+const STAGE_ORDER: Record<string, number> = {
+  committed: 0,
+  funded: 1,
+  negotiating: 2,
+  diligence: 3,
+  engaged: 4,
+  initial_outreach: 5,
+  new: 6,
+  parked: 7,
+  declined: 8,
+};
+
 export const Investors = (): JSX.Element => {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [draft, setDraft] = useState<NewInvestorDraft>(emptyDraft);
   const [saving, setSaving] = useState<boolean>(false);
+  const [sortKey, setSortKey] = useState<SortKey>("updated");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const navigate = useNavigate();
 
   const refresh = async (): Promise<void> => {
@@ -192,32 +209,74 @@ export const Investors = (): JSX.Element => {
           No investors yet. Add one manually or run a poll + classify.
         </div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Domain</th>
-              <th>Stage</th>
-              <th>Updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entities.map((e) => (
-              <tr
-                key={e.id}
-                onClick={() => navigate(`/investors/${e.id}`)}
-                style={{ cursor: "pointer" }}
-              >
-                <td>{e.name}</td>
-                <td>{categoryLabel(e.category)}</td>
-                <td>{e.domain ?? "—"}</td>
-                <td>{e.pipelineStage}</td>
-                <td>{new Date(e.updatedAt).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        (() => {
+          const toggleSort = (key: SortKey): void => {
+            if (sortKey === key) {
+              setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+            } else {
+              setSortKey(key);
+              setSortDir(key === "updated" ? "desc" : "asc");
+            }
+          };
+
+          const sorted = [...entities].sort((a, b) => {
+            let cmp = 0;
+            switch (sortKey) {
+              case "name":
+                cmp = a.name.localeCompare(b.name);
+                break;
+              case "category":
+                cmp = a.category.localeCompare(b.category);
+                break;
+              case "domain":
+                cmp = (a.domain ?? "").localeCompare(b.domain ?? "");
+                break;
+              case "stage":
+                cmp =
+                  (STAGE_ORDER[a.pipelineStage] ?? 99) -
+                  (STAGE_ORDER[b.pipelineStage] ?? 99);
+                break;
+              case "updated":
+                cmp = a.updatedAt.localeCompare(b.updatedAt);
+                break;
+            }
+            return sortDir === "asc" ? cmp : -cmp;
+          });
+
+          const arrow = (key: SortKey): string =>
+            sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "";
+
+          const headerStyle: React.CSSProperties = { cursor: "pointer", userSelect: "none" };
+
+          return (
+            <table>
+              <thead>
+                <tr>
+                  <th onClick={() => toggleSort("name")} style={headerStyle}>Name{arrow("name")}</th>
+                  <th onClick={() => toggleSort("category")} style={headerStyle}>Type{arrow("category")}</th>
+                  <th onClick={() => toggleSort("domain")} style={headerStyle}>Domain{arrow("domain")}</th>
+                  <th onClick={() => toggleSort("stage")} style={headerStyle}>Stage{arrow("stage")}</th>
+                  <th onClick={() => toggleSort("updated")} style={headerStyle}>Updated{arrow("updated")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((e) => (
+                  <tr
+                    key={e.id}
+                    onClick={() => navigate(`/investors/${e.id}`)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <td>{e.name}</td>
+                    <td>{categoryLabel(e.category)}</td>
+                    <td>{e.domain ?? "—"}</td>
+                    <td>{e.pipelineStage}</td>
+                    <td>{new Date(e.updatedAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        })()
       )}
     </div>
   );
