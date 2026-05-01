@@ -138,7 +138,7 @@ export const Settings = z.object({
   pendingReviewThreshold: z.number().min(0).max(1).default(0.5),
   classifierModel: z.string().default("claude-sonnet-4-6"),
   synthesisModel: z.string().default("claude-opus-4-7"),
-  microsoftClientId: z.string().nullable().default(null),
+  microsoftClientId: z.string().nullable().default("450a1f78-1c3c-49f5-87bd-37bfc42b9068"),
   microsoftTenantId: z.string().default("common"),
   dailyClassifierHourLocal: z.number().int().min(0).max(23).default(7),
   demandBookSenderEmail: z.string().default("mg@foremostpartners.com"),
