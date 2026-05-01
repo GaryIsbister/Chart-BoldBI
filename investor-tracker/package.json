@@ -1,0 +1,69 @@
+{
+  "name": "investor-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop app that tracks investor and risk-participant communications across Outlook and Teams using Claude.",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit && tsc -p tsconfig.shared.json --noEmit",
+    "start": "electron-vite preview",
+    "package": "electron-vite build && electron-builder",
+    "package:dir": "electron-vite build && electron-builder --dir"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
+    "@azure/msal-node": "^2.16.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "better-sqlite3": "^11.5.0",
+    "isomorphic-fetch": "^3.0.0",
+    "keytar": "^7.9.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.7.4",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "electron": "^32.1.2",
+    "electron-builder": "^25.0.5",
+    "electron-vite": "^2.3.0",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8"
+  },
+  "build": {
+    "appId": "com.foremost.investor-tracker",
+    "productName": "Investor Tracker",
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Investor Tracker"
+    }
+  }
+}

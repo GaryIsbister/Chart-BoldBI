@@ -1,0 +1,64 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches:
+      - claude/investor-communication-tracker-fCCMl
+      - main
+    paths:
+      - "investor-tracker/**"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: investor-tracker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: investor-tracker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows installer
+        run: npm run package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: investor-tracker-windows-installer
+          path: investor-tracker/release/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish rolling release
+        if: github.ref == 'refs/heads/claude/investor-communication-tracker-fCCMl'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: Latest Build (preview)
+          body: |
+            Latest installer built from `claude/investor-communication-tracker-fCCMl`.
+
+            **To install:** download the `.exe` below, double-click it, follow the
+            prompts. An "Investor Tracker" icon will appear on your desktop and
+            Start menu.
+
+            Built from commit ${{ github.sha }}.
+          files: investor-tracker/release/*.exe
+          prerelease: true
+          make_latest: "false"
