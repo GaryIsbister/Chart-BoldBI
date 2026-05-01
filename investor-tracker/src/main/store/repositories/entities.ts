@@ -1,12 +1,18 @@
 import type Database from "better-sqlite3";
 import { getDb } from "../db";
-import type { Entity, PipelineStage, StageHistoryEntry } from "@shared/types";
+import type {
+  Entity,
+  EntityCategory,
+  PipelineStage,
+  StageHistoryEntry,
+} from "@shared/types";
 import { nowIso, uuid } from "@shared/util";
 
 interface EntityRow {
   id: string;
   name: string;
   domain: string | null;
+  category: string;
   pipeline_stage: string;
   parked_until: string | null;
   stage_manual_override: number;
@@ -19,6 +25,7 @@ const rowToEntity = (row: EntityRow): Entity => ({
   id: row.id,
   name: row.name,
   domain: row.domain,
+  category: (row.category as EntityCategory) ?? "investor",
   pipelineStage: row.pipeline_stage as PipelineStage,
   parkedUntil: row.parked_until,
   stageManualOverride: row.stage_manual_override === 1,
@@ -60,6 +67,7 @@ export interface CreateEntityInput {
   name: string;
   domain: string | null;
   pipelineStage?: PipelineStage;
+  category?: EntityCategory;
   notes?: string | null;
 }
 
@@ -68,11 +76,12 @@ export const createEntity = (input: CreateEntityInput): Entity => {
   const now = nowIso();
   const id = uuid();
   const stage: PipelineStage = input.pipelineStage ?? "new";
+  const category: EntityCategory = input.category ?? "investor";
   db.prepare(
     `INSERT INTO entities
-     (id, name, domain, pipeline_stage, parked_until, stage_manual_override, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, NULL, 0, ?, ?, ?)`,
-  ).run(id, input.name, input.domain, stage, input.notes ?? null, now, now);
+     (id, name, domain, category, pipeline_stage, parked_until, stage_manual_override, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, NULL, 0, ?, ?, ?)`,
+  ).run(id, input.name, input.domain, category, stage, input.notes ?? null, now, now);
   recordStageChange(db, {
     entityId: id,
     fromStage: null,
@@ -81,6 +90,17 @@ export const createEntity = (input: CreateEntityInput): Entity => {
     reason: "entity created",
   });
   return getEntity(id)!;
+};
+
+export const updateEntityCategory = (
+  id: string,
+  category: EntityCategory,
+): Entity | null => {
+  const db = getDb();
+  db.prepare(
+    "UPDATE entities SET category = ?, updated_at = ? WHERE id = ?",
+  ).run(category, nowIso(), id);
+  return getEntity(id);
 };
 
 export interface UpdateEntityStageInput {

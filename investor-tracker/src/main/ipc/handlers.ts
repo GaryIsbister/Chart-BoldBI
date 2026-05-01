@@ -7,6 +7,7 @@ import {
   type CreateEntityArgs,
   type DecidePendingReviewArgs,
   type UpdateActionItemStatusArgs,
+  type UpdateEntityCategoryArgs,
   type UpdateEntityNotesArgs,
   type UpdateEntityStageArgs,
 } from "@shared/ipc";
@@ -16,6 +17,7 @@ import { getSettings, updateSettings } from "../store/repositories/settings";
 import {
   getEntity,
   listEntities,
+  updateEntityCategory,
   updateEntityNotes,
   updateEntityStage,
   findEntityByName,
@@ -120,11 +122,15 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.ENTITIES_UPDATE_NOTES, (_e, args: UpdateEntityNotesArgs) =>
     updateEntityNotes(args.id, args.notes),
   );
+  ipcMain.handle(IPC_CHANNELS.ENTITIES_UPDATE_CATEGORY, (_e, args: UpdateEntityCategoryArgs) =>
+    updateEntityCategory(args.id, args.category),
+  );
   ipcMain.handle(IPC_CHANNELS.ENTITIES_CREATE, (_e, args: CreateEntityArgs) => {
     const entity = createEntity({
       name: args.name,
       domain: args.domain ?? null,
       pipelineStage: args.pipelineStage,
+      category: args.category,
       notes: args.notes ?? null,
     });
     for (const email of args.contactEmails ?? []) {

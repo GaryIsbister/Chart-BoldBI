@@ -25,10 +25,14 @@ export type ActionItemStatus = (typeof ACTION_ITEM_STATUSES)[number];
 export const SOURCE_KINDS = ["outlook_mail", "teams_chat"] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];
 
+export const ENTITY_CATEGORIES = ["investor", "participant", "both"] as const;
+export type EntityCategory = (typeof ENTITY_CATEGORIES)[number];
+
 export const Entity = z.object({
   id: z.string().uuid(),
   name: z.string(),
   domain: z.string().nullable(),
+  category: z.enum(ENTITY_CATEGORIES),
   pipelineStage: z.enum(PIPELINE_STAGES),
   parkedUntil: z.string().nullable(),
   stageManualOverride: z.boolean(),

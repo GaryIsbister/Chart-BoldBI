@@ -145,6 +145,14 @@ const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    name: "entity_category",
+    sql: `
+      ALTER TABLE entities ADD COLUMN category TEXT NOT NULL DEFAULT 'investor';
+      CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category);
+    `,
+  },
 ];
 
 export const runMigrations = (db: Database.Database): void => {

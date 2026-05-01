@@ -2,12 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { invoke } from "../api";
 import { IPC_CHANNELS } from "@shared/ipc";
-import { PIPELINE_STAGES, type Entity, type PipelineStage } from "@shared/types";
+import {
+  ENTITY_CATEGORIES,
+  PIPELINE_STAGES,
+  type Entity,
+  type EntityCategory,
+  type PipelineStage,
+} from "@shared/types";
 
 interface NewInvestorDraft {
   name: string;
   domain: string;
   stage: PipelineStage;
+  category: EntityCategory;
   emails: string;
   notes: string;
 }
@@ -16,9 +23,21 @@ const emptyDraft = (): NewInvestorDraft => ({
   name: "",
   domain: "",
   stage: "new",
+  category: "investor",
   emails: "",
   notes: "",
 });
+
+const categoryLabel = (c: EntityCategory): string => {
+  switch (c) {
+    case "investor":
+      return "Investor";
+    case "participant":
+      return "Participant";
+    case "both":
+      return "Both";
+  }
+};
 
 export const Investors = (): JSX.Element => {
   const [entities, setEntities] = useState<Entity[]>([]);
@@ -48,6 +67,7 @@ export const Investors = (): JSX.Element => {
         name: draft.name.trim(),
         domain: draft.domain.trim() || null,
         pipelineStage: draft.stage,
+        category: draft.category,
         notes: draft.notes.trim() || null,
         contactEmails: emails,
       });
@@ -93,6 +113,8 @@ export const Investors = (): JSX.Element => {
                 placeholder="e.g. swedfund.se"
               />
             </div>
+          </div>
+          <div className="row">
             <div>
               <label>Pipeline stage</label>
               <select
@@ -104,6 +126,24 @@ export const Investors = (): JSX.Element => {
                 {PIPELINE_STAGES.map((s) => (
                   <option key={s} value={s}>
                     {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>Type</label>
+              <select
+                value={draft.category}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    category: e.target.value as EntityCategory,
+                  })
+                }
+              >
+                {ENTITY_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {categoryLabel(c)}
                   </option>
                 ))}
               </select>
@@ -156,6 +196,7 @@ export const Investors = (): JSX.Element => {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Type</th>
               <th>Domain</th>
               <th>Stage</th>
               <th>Updated</th>
@@ -169,6 +210,7 @@ export const Investors = (): JSX.Element => {
                 style={{ cursor: "pointer" }}
               >
                 <td>{e.name}</td>
+                <td>{categoryLabel(e.category)}</td>
                 <td>{e.domain ?? "—"}</td>
                 <td>{e.pipelineStage}</td>
                 <td>{new Date(e.updatedAt).toLocaleDateString()}</td>

@@ -3,16 +3,29 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { invoke } from "../api";
 import { IPC_CHANNELS, type SenderCandidate } from "@shared/ipc";
 import {
+  ENTITY_CATEGORIES,
   PIPELINE_STAGES,
   type ActionItem,
   type ActionItemOwner,
   type ActionItemStatus,
   type Contact,
   type Entity,
+  type EntityCategory,
   type Message,
   type PipelineStage,
   type Thread,
 } from "@shared/types";
+
+const categoryLabel = (c: EntityCategory): string => {
+  switch (c) {
+    case "investor":
+      return "Investor";
+    case "participant":
+      return "Participant";
+    case "both":
+      return "Both";
+  }
+};
 
 export const InvestorDetail = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +74,23 @@ export const InvestorDetail = (): JSX.Element => {
   const updateStage = async (stage: PipelineStage): Promise<void> => {
     if (!id) return;
     await invoke<Entity>(IPC_CHANNELS.ENTITIES_UPDATE_STAGE, { id, stage });
+    await refresh();
+  };
+
+  const updateCategory = async (category: EntityCategory): Promise<void> => {
+    if (!id) return;
+    await invoke<Entity>(IPC_CHANNELS.ENTITIES_UPDATE_CATEGORY, { id, category });
+    await refresh();
+  };
+
+  const toggleActionItem = async (
+    item: ActionItem,
+    completed: boolean,
+  ): Promise<void> => {
+    await invoke(IPC_CHANNELS.ACTION_ITEMS_UPDATE_STATUS, {
+      id: item.id,
+      status: completed ? "done" : "open",
+    });
     await refresh();
   };
 
@@ -159,6 +189,21 @@ export const InvestorDetail = (): JSX.Element => {
 
       <div className="card">
         <div className="row">
+          <div>
+            <label>Type</label>
+            <select
+              value={entity.category}
+              onChange={(e) =>
+                void updateCategory(e.target.value as EntityCategory)
+              }
+            >
+              {ENTITY_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {categoryLabel(c)}
+                </option>
+              ))}
+            </select>
+          </div>
           <div>
             <label>Pipeline stage</label>
             <select
@@ -352,11 +397,25 @@ export const InvestorDetail = (): JSX.Element => {
         ) : (
           <table>
             <thead>
-              <tr><th>Owner</th><th>Description</th><th>Due</th><th>Status</th><th></th></tr>
+              <tr>
+                <th style={{ width: 40 }}>Done</th>
+                <th>Owner</th>
+                <th>Description</th>
+                <th>Due</th>
+                <th>Status</th>
+              </tr>
             </thead>
             <tbody>
               {openItems.map((a) => (
                 <tr key={a.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={(e) => void toggleActionItem(a, e.target.checked)}
+                      style={{ width: "auto" }}
+                    />
+                  </td>
                   <td>{a.ownerSide}</td>
                   <td>{a.description}</td>
                   <td>{a.dueDate ?? "—"}</td>
@@ -373,14 +432,6 @@ export const InvestorDetail = (): JSX.Element => {
                       <option value="cancelled">cancelled</option>
                     </select>
                   </td>
-                  <td>
-                    <button
-                      className="btn secondary"
-                      onClick={() => void updateActionStatus(a.id, "done")}
-                    >
-                      Done
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -390,12 +441,22 @@ export const InvestorDetail = (): JSX.Element => {
         {doneItems.length > 0 && (
           <>
             <h4 className="muted" style={{ marginTop: 12, marginBottom: 4 }}>
-              Closed ({doneItems.length})
+              Completed ({doneItems.length})
             </h4>
             <table>
               <tbody>
-                {doneItems.slice(0, 10).map((a) => (
+                {doneItems.slice(0, 20).map((a) => (
                   <tr key={a.id}>
+                    <td style={{ width: 40 }}>
+                      <input
+                        type="checkbox"
+                        checked
+                        onChange={(e) =>
+                          void toggleActionItem(a, e.target.checked)
+                        }
+                        style={{ width: "auto" }}
+                      />
+                    </td>
                     <td className="muted">{a.ownerSide}</td>
                     <td className="muted" style={{ textDecoration: "line-through" }}>
                       {a.description}

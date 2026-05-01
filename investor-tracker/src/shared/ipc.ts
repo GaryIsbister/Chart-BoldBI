@@ -2,6 +2,7 @@ import type {
   ActionItem,
   Contact,
   Entity,
+  EntityCategory,
   Message,
   PendingReview,
   PendingReviewDecision,
@@ -28,6 +29,7 @@ export const IPC_CHANNELS = {
   ENTITIES_CREATE: "entities:create",
   ENTITIES_UPDATE_STAGE: "entities:updateStage",
   ENTITIES_UPDATE_NOTES: "entities:updateNotes",
+  ENTITIES_UPDATE_CATEGORY: "entities:updateCategory",
 
   // Contacts
   CONTACTS_LIST_FOR_ENTITY: "contacts:listForEntity",
@@ -95,8 +97,14 @@ export interface CreateEntityArgs {
   name: string;
   domain?: string | null;
   pipelineStage?: PipelineStage;
+  category?: EntityCategory;
   notes?: string | null;
   contactEmails?: string[];
+}
+
+export interface UpdateEntityCategoryArgs {
+  id: string;
+  category: EntityCategory;
 }
 
 export interface CreateContactArgs {
