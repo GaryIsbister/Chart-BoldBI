@@ -1,0 +1,217 @@
+import { getDb } from "../db";
+import type { Message, SourceKind, Thread } from "@shared/types";
+import { nowIso, uuid } from "@shared/util";
+
+interface MessageRow {
+  id: string;
+  source: string;
+  external_id: string;
+  thread_id: string | null;
+  contact_id: string | null;
+  entity_id: string | null;
+  from_email: string;
+  from_name: string | null;
+  to_emails: string;
+  subject: string | null;
+  body_preview: string;
+  received_at: string;
+  is_from_us: number;
+  raw: string | null;
+}
+
+interface ThreadRow {
+  id: string;
+  external_conversation_id: string;
+  source: string;
+  entity_id: string | null;
+  subject: string | null;
+  last_message_at: string;
+  summary: string | null;
+}
+
+const rowToMessage = (row: MessageRow): Message => ({
+  id: row.id,
+  source: row.source as SourceKind,
+  externalId: row.external_id,
+  threadId: row.thread_id,
+  contactId: row.contact_id,
+  entityId: row.entity_id,
+  fromEmail: row.from_email,
+  fromName: row.from_name,
+  toEmails: JSON.parse(row.to_emails) as string[],
+  subject: row.subject,
+  bodyPreview: row.body_preview,
+  receivedAt: row.received_at,
+  isFromUs: row.is_from_us === 1,
+  raw: row.raw ? JSON.parse(row.raw) : undefined,
+});
+
+const rowToThread = (row: ThreadRow): Thread => ({
+  id: row.id,
+  externalConversationId: row.external_conversation_id,
+  source: row.source as SourceKind,
+  entityId: row.entity_id,
+  subject: row.subject,
+  lastMessageAt: row.last_message_at,
+  summary: row.summary,
+});
+
+export const findMessageByExternalId = (
+  source: SourceKind,
+  externalId: string,
+): Message | null => {
+  const db = getDb();
+  const row = db
+    .prepare("SELECT * FROM messages WHERE source = ? AND external_id = ?")
+    .get(source, externalId) as MessageRow | undefined;
+  return row ? rowToMessage(row) : null;
+};
+
+export interface UpsertThreadInput {
+  source: SourceKind;
+  externalConversationId: string;
+  subject: string | null;
+  lastMessageAt: string;
+  entityId?: string | null;
+}
+
+export const upsertThread = (input: UpsertThreadInput): Thread => {
+  const db = getDb();
+  const existing = db
+    .prepare(
+      "SELECT * FROM threads WHERE source = ? AND external_conversation_id = ?",
+    )
+    .get(input.source, input.externalConversationId) as ThreadRow | undefined;
+  if (existing) {
+    db.prepare(
+      `UPDATE threads
+       SET subject = COALESCE(?, subject),
+           last_message_at = MAX(last_message_at, ?),
+           entity_id = COALESCE(?, entity_id)
+       WHERE id = ?`,
+    ).run(input.subject, input.lastMessageAt, input.entityId ?? null, existing.id);
+    return rowToThread(
+      db.prepare("SELECT * FROM threads WHERE id = ?").get(existing.id) as ThreadRow,
+    );
+  }
+  const id = uuid();
+  db.prepare(
+    `INSERT INTO threads (id, external_conversation_id, source, entity_id, subject, last_message_at, summary)
+     VALUES (?, ?, ?, ?, ?, ?, NULL)`,
+  ).run(
+    id,
+    input.externalConversationId,
+    input.source,
+    input.entityId ?? null,
+    input.subject,
+    input.lastMessageAt,
+  );
+  return rowToThread(
+    db.prepare("SELECT * FROM threads WHERE id = ?").get(id) as ThreadRow,
+  );
+};
+
+export interface InsertMessageInput {
+  source: SourceKind;
+  externalId: string;
+  threadId: string | null;
+  contactId: string | null;
+  entityId: string | null;
+  fromEmail: string;
+  fromName: string | null;
+  toEmails: string[];
+  subject: string | null;
+  bodyPreview: string;
+  receivedAt: string;
+  isFromUs: boolean;
+  raw?: unknown;
+}
+
+export const insertMessage = (input: InsertMessageInput): Message => {
+  const existing = findMessageByExternalId(input.source, input.externalId);
+  if (existing) return existing;
+  const db = getDb();
+  const id = uuid();
+  db.prepare(
+    `INSERT INTO messages
+     (id, source, external_id, thread_id, contact_id, entity_id, from_email, from_name, to_emails, subject, body_preview, received_at, is_from_us, raw)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    input.source,
+    input.externalId,
+    input.threadId,
+    input.contactId,
+    input.entityId,
+    input.fromEmail,
+    input.fromName,
+    JSON.stringify(input.toEmails),
+    input.subject,
+    input.bodyPreview,
+    input.receivedAt,
+    input.isFromUs ? 1 : 0,
+    input.raw ? JSON.stringify(input.raw) : null,
+  );
+  return findMessageByExternalId(input.source, input.externalId)!;
+};
+
+export const updateMessageEntity = (id: string, entityId: string | null): void => {
+  const db = getDb();
+  db.prepare("UPDATE messages SET entity_id = ? WHERE id = ?").run(entityId, id);
+};
+
+export const updateMessageContact = (id: string, contactId: string | null): void => {
+  const db = getDb();
+  db.prepare("UPDATE messages SET contact_id = ? WHERE id = ?").run(contactId, id);
+};
+
+export const updateThreadEntity = (id: string, entityId: string | null): void => {
+  const db = getDb();
+  db.prepare("UPDATE threads SET entity_id = ? WHERE id = ?").run(entityId, id);
+};
+
+export const updateThreadSummary = (id: string, summary: string | null): void => {
+  const db = getDb();
+  db.prepare("UPDATE threads SET summary = ? WHERE id = ?").run(summary, id);
+};
+
+export const listThreadsForEntity = (entityId: string): Thread[] => {
+  const db = getDb();
+  return (
+    db
+      .prepare("SELECT * FROM threads WHERE entity_id = ? ORDER BY last_message_at DESC")
+      .all(entityId) as ThreadRow[]
+  ).map(rowToThread);
+};
+
+export const listMessagesForThread = (threadId: string): Message[] => {
+  const db = getDb();
+  return (
+    db
+      .prepare("SELECT * FROM messages WHERE thread_id = ? ORDER BY received_at ASC")
+      .all(threadId) as MessageRow[]
+  ).map(rowToMessage);
+};
+
+export const listMessagesByEmail = (email: string, limit = 50): Message[] => {
+  const db = getDb();
+  return (
+    db
+      .prepare(
+        "SELECT * FROM messages WHERE LOWER(from_email) = LOWER(?) ORDER BY received_at DESC LIMIT ?",
+      )
+      .all(email, limit) as MessageRow[]
+  ).map(rowToMessage);
+};
+
+export const listRecentUnclassifiedMessages = (limit = 200): Message[] => {
+  const db = getDb();
+  return (
+    db
+      .prepare(
+        "SELECT * FROM messages WHERE entity_id IS NULL AND is_from_us = 0 ORDER BY received_at DESC LIMIT ?",
+      )
+      .all(limit) as MessageRow[]
+  ).map(rowToMessage);
+};
+
