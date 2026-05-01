@@ -1,0 +1,29 @@
+{
+  "azure": {
+    "clientId": "REPLACE_WITH_AZURE_AD_APP_CLIENT_ID",
+    "tenantId": "REPLACE_WITH_AZURE_AD_TENANT_ID_OR_common",
+    "redirectUri": "http://localhost:8400",
+    "scopes": [
+      "Mail.Read",
+      "MailboxFolder.Read",
+      "Chat.Read",
+      "ChatMessage.Read",
+      "User.Read",
+      "offline_access"
+    ]
+  },
+  "claude": {
+    "models": {
+      "classifier": "claude-sonnet-4-6",
+      "synthesis": "claude-opus-4-7"
+    }
+  },
+  "polling": {
+    "intervalMinutes": 5,
+    "investorsFolderName": "Investors",
+    "demandBookSenderEmail": "Marina@foremost.example"
+  },
+  "schedule": {
+    "dailyClassifierCron": "0 7 * * *"
+  }
+}
