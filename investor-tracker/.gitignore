@@ -4,5 +4,6 @@ release
 .env
 .env.local
 *.log
+*.tsbuildinfo
 .vite
 .DS_Store
