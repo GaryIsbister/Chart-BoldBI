@@ -141,5 +141,6 @@ export const Settings = z.object({
   microsoftClientId: z.string().nullable().default(null),
   microsoftTenantId: z.string().default("common"),
   dailyClassifierHourLocal: z.number().int().min(0).max(23).default(7),
+  demandBookSenderEmail: z.string().default("mg@foremostpartners.com"),
 });
 export type Settings = z.infer<typeof Settings>;

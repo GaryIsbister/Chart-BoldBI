@@ -132,11 +132,18 @@ export const SettingsView = (): JSX.Element => {
 
       <div className="card">
         <h3>Demand book</h3>
-        <button className="primary" disabled={busy} onClick={importDemandBook}>
-          Import latest demand book from Marina
+        <label>
+          Sender email:{" "}
+          <input
+            value={settings.demandBookSenderEmail}
+            onChange={(e) => update({ demandBookSenderEmail: e.target.value })}
+          />
+        </label>
+        <button className="primary" style={{ marginTop: 8 }} disabled={busy} onClick={importDemandBook}>
+          Import latest demand book
         </button>
         <div className="muted" style={{ marginTop: 8 }}>
-          Searches Outlook for the latest message from Marina at Foremost, parses the attached demand book with Claude, and seeds the classifier context.
+          Searches Outlook for the latest message from this sender, parses the attached demand book with Claude, and seeds the classifier context.
         </div>
       </div>
     </>
