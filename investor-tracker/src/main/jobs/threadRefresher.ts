@@ -32,3 +32,29 @@ export const runThreadRefresher = async (limit = 10): Promise<ThreadRefresherRes
 
   return { refreshed, errors };
 };
+
+export const runThreadRefresherForEntity = async (
+  entityId: string,
+): Promise<ThreadRefresherResult> => {
+  const db = getDb();
+  const errors: string[] = [];
+  let refreshed = 0;
+
+  const rows = db
+    .prepare(
+      `SELECT id FROM threads WHERE entity_id = ? ORDER BY last_message_at DESC`,
+    )
+    .all(entityId) as Array<{ id: string }>;
+
+  for (const row of rows) {
+    try {
+      const analysis = await analyzeThread(row.id, entityId);
+      applyAnalysis(row.id, entityId, analysis);
+      refreshed += 1;
+    } catch (e) {
+      errors.push(`thread ${row.id}: ${(e as Error).message}`);
+    }
+  }
+
+  return { refreshed, errors };
+};

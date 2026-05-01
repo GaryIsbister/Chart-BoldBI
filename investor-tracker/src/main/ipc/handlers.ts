@@ -39,6 +39,7 @@ import {
 } from "../store/repositories/pendingReviews";
 import { runPoller, runPollAndClassify } from "../jobs/poller";
 import { runDailyClassifier } from "../jobs/dailyClassifier";
+import { runThreadRefresherForEntity } from "../jobs/threadRefresher";
 import { signIn, signOut, getSignedInAccount } from "../graph/auth";
 import type { Settings } from "@shared/types";
 
@@ -217,4 +218,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.JOBS_RUN_POLLER, () => runPoller());
   ipcMain.handle(IPC_CHANNELS.JOBS_RUN_DAILY_CLASSIFIER, () => runDailyClassifier());
   ipcMain.handle(IPC_CHANNELS.JOBS_RUN_POLL_AND_CLASSIFY, () => runPollAndClassify());
+  ipcMain.handle(IPC_CHANNELS.JOBS_REFRESH_ENTITY_THREADS, (_e, entityId: string) =>
+    runThreadRefresherForEntity(entityId),
+  );
 };

@@ -51,6 +51,8 @@ export const InvestorDetail = (): JSX.Element => {
   const [lookupQuery, setLookupQuery] = useState<string>("");
   const [lookupResults, setLookupResults] = useState<SenderCandidate[] | null>(null);
   const [lookupRunning, setLookupRunning] = useState<boolean>(false);
+  const [analyzing, setAnalyzing] = useState<boolean>(false);
+  const [analyzeStatus, setAnalyzeStatus] = useState<string>("");
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -158,6 +160,27 @@ export const InvestorDetail = (): JSX.Element => {
       setLookupResults(results);
     } finally {
       setLookupRunning(false);
+    }
+  };
+
+  const reanalyzeThreads = async (): Promise<void> => {
+    if (!id) return;
+    setAnalyzing(true);
+    setAnalyzeStatus("");
+    try {
+      const result = await invoke<{ refreshed: number; errors: string[] }>(
+        IPC_CHANNELS.JOBS_REFRESH_ENTITY_THREADS,
+        id,
+      );
+      setAnalyzeStatus(
+        `Re-analyzed ${result.refreshed} thread(s)` +
+          (result.errors.length > 0 ? ` · ${result.errors.length} error(s)` : ""),
+      );
+      await refresh();
+    } catch (e) {
+      setAnalyzeStatus(`Failed: ${(e as Error).message}`);
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -341,7 +364,21 @@ export const InvestorDetail = (): JSX.Element => {
       </div>
 
       <div className="card">
-        <h3>Action items</h3>
+        <div className="row" style={{ alignItems: "baseline" }}>
+          <h3 style={{ flex: 1 }}>Action items</h3>
+          <button
+            className="btn secondary"
+            disabled={analyzing}
+            onClick={() => void reanalyzeThreads()}
+            style={{ flex: "0 0 auto" }}
+            title="Run Claude across all email threads for this investor to find new action items and resolve completed ones."
+          >
+            {analyzing ? "Analyzing..." : "Re-analyze emails for action items"}
+          </button>
+        </div>
+        {analyzeStatus && (
+          <div className="muted" style={{ marginBottom: 8 }}>{analyzeStatus}</div>
+        )}
 
         <div style={{ marginBottom: 12 }}>
           <div className="row">
