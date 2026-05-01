@@ -1,0 +1,26 @@
+* { box-sizing: border-box; }
+body, html, #root { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", system-ui, sans-serif; color: #1f2937; background: #f7f7f8; }
+.app { display: flex; flex-direction: column; height: 100vh; }
+.topbar { display: flex; align-items: center; gap: 1rem; padding: 0.5rem 1rem; border-bottom: 1px solid #e5e7eb; background: white; }
+.brand { font-weight: 600; }
+.topbar nav { display: flex; gap: 0.25rem; }
+.tab { background: transparent; border: 1px solid transparent; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; text-transform: capitalize; font-size: 0.9rem; }
+.tab:hover { background: #f3f4f6; }
+.tab.active { background: #111827; color: white; }
+.status { margin-left: auto; display: flex; gap: 1rem; align-items: center; font-size: 0.85rem; color: #6b7280; }
+.poll { font-variant-numeric: tabular-nums; }
+main { flex: 1; overflow: auto; padding: 1rem; }
+.card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+button { font: inherit; cursor: pointer; }
+.btn { background: #111827; color: white; border: none; padding: 0.45rem 0.9rem; border-radius: 6px; }
+.btn.secondary { background: white; color: #111827; border: 1px solid #d1d5db; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #f1f5f9; }
+th { color: #374151; background: #f9fafb; position: sticky; top: 0; }
+.muted { color: #6b7280; }
+.pill { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.75rem; background: #f3f4f6; }
+.pill.investor { background: #dcfce7; color: #166534; }
+.pill.not_investor { background: #fee2e2; color: #991b1b; }
+.pill.uncertain { background: #fef3c7; color: #92400e; }
+.row { display: flex; gap: 0.5rem; align-items: center; }
+.input { padding: 0.4rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; min-width: 280px; }
