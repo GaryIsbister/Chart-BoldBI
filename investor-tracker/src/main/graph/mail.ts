@@ -31,6 +31,46 @@ interface GraphPage<T> {
 
 const cursorKey = (folder: string): string => `outlook:${folder}:lastReceivedDateTime`;
 
+const WELL_KNOWN_FOLDERS = new Set([
+  "inbox",
+  "drafts",
+  "sentitems",
+  "deleteditems",
+  "junkemail",
+  "outbox",
+  "archive",
+  "clutter",
+  "conflicts",
+  "conversationhistory",
+  "localfailures",
+  "msgfolderroot",
+  "recoverableitemsdeletions",
+  "scheduled",
+  "searchfolders",
+  "serverfailures",
+  "syncissues",
+]);
+
+interface MailFolder {
+  id: string;
+  displayName: string;
+  parentFolderId: string | null;
+}
+
+const resolveFolderId = async (folder: string): Promise<string | null> => {
+  const lower = folder.toLowerCase();
+  if (WELL_KNOWN_FOLDERS.has(lower)) return lower;
+  const escaped = folder.replace(/'/g, "''");
+  const res = await graphFetch<GraphPage<MailFolder>>(
+    `/me/mailFolders?$filter=${encodeURIComponent(`displayName eq '${escaped}'`)}&$top=1`,
+  );
+  if (res.value[0]) return res.value[0].id;
+  const child = await graphFetch<GraphPage<MailFolder>>(
+    `/me/mailFolders/inbox/childFolders?$filter=${encodeURIComponent(`displayName eq '${escaped}'`)}&$top=1`,
+  );
+  return child.value[0]?.id ?? null;
+};
+
 export interface FetchMailOptions {
   folder: string;
   pageSize?: number;
@@ -48,9 +88,11 @@ export const fetchMailDelta = async (options: FetchMailOptions): Promise<Message
     ? `&$filter=${encodeURIComponent(`receivedDateTime gt ${sinceIso}`)}`
     : "";
 
-  const folderPath = folder === "inbox"
-    ? "/me/mailFolders/inbox/messages"
-    : `/me/mailFolders('${folder}')/messages`;
+  const folderId = await resolveFolderId(folder);
+  if (!folderId) {
+    return [];
+  }
+  const folderPath = `/me/mailFolders/${folderId}/messages`;
 
   let url: string | null = `${folderPath}?$top=${pageSize}&$orderby=receivedDateTime desc${filter}`;
   const inserted: Message[] = [];

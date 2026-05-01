@@ -42,7 +42,7 @@ export const fetchTeamsDelta = async (): Promise<Message[]> => {
   const accountEmail = (await getSignedInAccount())?.toLowerCase() ?? null;
   const inserted: Message[] = [];
 
-  const chats = await graphFetch<GraphPage<GraphChat>>("/me/chats?$top=20&$orderby=lastUpdatedDateTime desc");
+  const chats = await graphFetch<GraphPage<GraphChat>>("/me/chats?$top=50");
   for (const chat of chats.value) {
     const since = getCursor(teamsCursorKey(chat.id));
     const filter = since
