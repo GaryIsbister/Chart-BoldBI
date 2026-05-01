@@ -87,6 +87,18 @@ export const SettingsView = (): JSX.Element => {
       </div>
 
       <div className="card">
+        <h3>Microsoft tenant ID</h3>
+        <input
+          value={settings.microsoftTenantId}
+          onChange={(e) => update({ microsoftTenantId: e.target.value })}
+          placeholder="Directory (tenant) ID GUID, or 'common' for multi-tenant"
+        />
+        <div className="muted" style={{ marginTop: 8 }}>
+          For a single-tenant app registration, paste the Directory (tenant) ID GUID from the app's Overview page. Use <code>common</code> only for multi-tenant apps.
+        </div>
+      </div>
+
+      <div className="card">
         <h3>Anthropic API key</h3>
         <input
           type="password"
