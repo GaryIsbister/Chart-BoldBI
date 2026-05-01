@@ -21,7 +21,7 @@
   "polling": {
     "intervalMinutes": 5,
     "investorsFolderName": "Investors",
-    "demandBookSenderEmail": "Marina@foremost.example"
+    "demandBookSenderEmail": "mg@foremostpartners.com"
   },
   "schedule": {
     "dailyClassifierCron": "0 7 * * *"
