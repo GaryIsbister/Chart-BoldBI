@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { invoke } from "../api";
 import { IPC_CHANNELS, type SenderCandidate } from "@shared/ipc";
@@ -6,6 +6,7 @@ import {
   ENTITY_CATEGORIES,
   PIPELINE_STAGES,
   isGenericDomain,
+  type ActionItem,
   type Entity,
   type EntityCategory,
   type PipelineStage,
@@ -42,7 +43,14 @@ const categoryLabel = (c: EntityCategory): string => {
   }
 };
 
-type SortKey = "name" | "category" | "domain" | "stage" | "updated";
+type SortKey =
+  | "name"
+  | "category"
+  | "domain"
+  | "stage"
+  | "unread"
+  | "actions"
+  | "updated";
 type SortDir = "asc" | "desc";
 
 const STAGE_ORDER: Record<string, number> = {
@@ -87,6 +95,8 @@ const emptySearch = (): SearchState => ({
 
 export const Investors = (): JSX.Element => {
   const [entities, setEntities] = useState<Entity[]>([]);
+  const [newCounts, setNewCounts] = useState<Array<{ entityId: string; count: number }>>([]);
+  const [allActionItems, setAllActionItems] = useState<ActionItem[]>([]);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [draft, setDraft] = useState<NewInvestorDraft>(emptyDraft);
   const [saving, setSaving] = useState<boolean>(false);
@@ -97,9 +107,32 @@ export const Investors = (): JSX.Element => {
   const navigate = useNavigate();
 
   const refresh = async (): Promise<void> => {
-    const list = await invoke<Entity[]>(IPC_CHANNELS.ENTITIES_LIST);
+    const [list, counts, items] = await Promise.all([
+      invoke<Entity[]>(IPC_CHANNELS.ENTITIES_LIST),
+      invoke<Array<{ entityId: string; count: number }>>(
+        IPC_CHANNELS.MESSAGES_NEW_COUNTS,
+      ),
+      invoke<ActionItem[]>(IPC_CHANNELS.ACTION_ITEMS_LIST),
+    ]);
     setEntities(list);
+    setNewCounts(counts);
+    setAllActionItems(items);
   };
+
+  const newByEntity = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of newCounts) m.set(c.entityId, c.count);
+    return m;
+  }, [newCounts]);
+
+  const openActionsByEntity = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of allActionItems) {
+      if (a.status !== "open" && a.status !== "in_progress") continue;
+      m.set(a.entityId, (m.get(a.entityId) ?? 0) + 1);
+    }
+    return m;
+  }, [allActionItems]);
 
   useEffect(() => {
     void refresh();
@@ -563,6 +596,15 @@ export const Investors = (): JSX.Element => {
                   (STAGE_ORDER[a.pipelineStage] ?? 99) -
                   (STAGE_ORDER[b.pipelineStage] ?? 99);
                 break;
+              case "unread":
+                cmp =
+                  (newByEntity.get(a.id) ?? 0) - (newByEntity.get(b.id) ?? 0);
+                break;
+              case "actions":
+                cmp =
+                  (openActionsByEntity.get(a.id) ?? 0) -
+                  (openActionsByEntity.get(b.id) ?? 0);
+                break;
               case "updated":
                 cmp = a.updatedAt.localeCompare(b.updatedAt);
                 break;
@@ -574,6 +616,8 @@ export const Investors = (): JSX.Element => {
             sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "";
 
           const headerStyle: React.CSSProperties = { cursor: "pointer", userSelect: "none" };
+          const redCell: React.CSSProperties = { color: "#cf222e", fontWeight: 600 };
+          const zeroCell: React.CSSProperties = { color: "var(--muted)" };
 
           return (
             <table>
@@ -583,23 +627,33 @@ export const Investors = (): JSX.Element => {
                   <th onClick={() => toggleSort("category")} style={headerStyle}>Type{arrow("category")}</th>
                   <th onClick={() => toggleSort("domain")} style={headerStyle}>Domain{arrow("domain")}</th>
                   <th onClick={() => toggleSort("stage")} style={headerStyle}>Stage{arrow("stage")}</th>
+                  <th onClick={() => toggleSort("unread")} style={headerStyle}>Unread{arrow("unread")}</th>
+                  <th onClick={() => toggleSort("actions")} style={headerStyle}>Open actions{arrow("actions")}</th>
                   <th onClick={() => toggleSort("updated")} style={headerStyle}>Updated{arrow("updated")}</th>
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((e) => (
-                  <tr
-                    key={e.id}
-                    onClick={() => navigate(`/investors/${e.id}`)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <td>{e.name}</td>
-                    <td>{categoryLabel(e.category)}</td>
-                    <td>{e.domain ?? "—"}</td>
-                    <td>{e.pipelineStage}</td>
-                    <td>{new Date(e.updatedAt).toLocaleDateString()}</td>
-                  </tr>
-                ))}
+                {sorted.map((e) => {
+                  const unread = newByEntity.get(e.id) ?? 0;
+                  const openActions = openActionsByEntity.get(e.id) ?? 0;
+                  return (
+                    <tr
+                      key={e.id}
+                      onClick={() => navigate(`/investors/${e.id}`)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td>{e.name}</td>
+                      <td>{categoryLabel(e.category)}</td>
+                      <td>{e.domain ?? "—"}</td>
+                      <td>{e.pipelineStage}</td>
+                      <td style={unread > 0 ? redCell : zeroCell}>{unread}</td>
+                      <td style={openActions > 0 ? redCell : zeroCell}>
+                        {openActions}
+                      </td>
+                      <td>{new Date(e.updatedAt).toLocaleDateString()}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           );
