@@ -191,8 +191,8 @@ export const InvestorDetail = (): JSX.Element => {
 
   const runInvestorBackfill = async (): Promise<void> => {
     if (!id) return;
-    if (contacts.length === 0) {
-      setBackfillStatus("Add at least one contact email before backfilling.");
+    if (contacts.length === 0 && !entity?.domain) {
+      setBackfillStatus("Add a domain or contact email before backfilling.");
       return;
     }
     setBackfilling(true);
@@ -508,9 +508,10 @@ export const InvestorDetail = (): JSX.Element => {
 
         <h4 style={{ marginTop: 16 }}>Pull older emails for this investor</h4>
         <div className="muted" style={{ marginBottom: 8 }}>
-          Searches Outlook for older emails sent FROM the contact addresses
-          above and stores them locally. Cheaper than the full backfill — only
-          fetches emails matching this investor.
+          Pulls every email where the sender or recipient matches this
+          investor&apos;s domain ({entity.domain ?? "set domain on this card"})
+          OR any of the contact addresses above. Includes replies sent from
+          your team to that domain.
         </div>
         <div className="row">
           <div style={{ flex: "0 0 auto" }}>
@@ -528,16 +529,16 @@ export const InvestorDetail = (): JSX.Element => {
           </div>
           <button
             className="btn"
-            disabled={backfilling || contacts.length === 0}
+            disabled={backfilling || (contacts.length === 0 && !entity.domain)}
             onClick={() => void runInvestorBackfill()}
             style={{ flex: "0 0 auto", alignSelf: "end" }}
           >
             {backfilling ? "Backfilling..." : "Backfill emails"}
           </button>
         </div>
-        {contacts.length === 0 && (
+        {contacts.length === 0 && !entity.domain && (
           <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
-            Add a contact email before you can backfill.
+            Add a domain or contact email before you can backfill.
           </div>
         )}
         {backfillStatus && (

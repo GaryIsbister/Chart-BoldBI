@@ -234,6 +234,41 @@ export const backfillMessagesByEmail = (
   };
 };
 
+export const backfillMessagesByDomain = (
+  domain: string,
+  entityId: string,
+): { messages: number; threads: number } => {
+  const db = getDb();
+  const cleanDomain = domain.trim().toLowerCase().replace(/^@/, "");
+  const likePattern = `%@${cleanDomain}`;
+
+  const msgRes = db
+    .prepare(
+      `UPDATE messages
+       SET entity_id = ?
+       WHERE entity_id IS NULL
+         AND LOWER(from_email) LIKE ?`,
+    )
+    .run(entityId, likePattern);
+
+  const threadRes = db
+    .prepare(
+      `UPDATE threads
+       SET entity_id = ?
+       WHERE entity_id IS NULL
+         AND id IN (
+           SELECT DISTINCT thread_id FROM messages
+           WHERE LOWER(from_email) LIKE ? AND thread_id IS NOT NULL
+         )`,
+    )
+    .run(entityId, likePattern);
+
+  return {
+    messages: msgRes.changes,
+    threads: threadRes.changes,
+  };
+};
+
 export interface SenderCandidate {
   email: string;
   displayName: string | null;

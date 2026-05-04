@@ -205,17 +205,57 @@ export const searchSendersByQuery = async (
 
 export interface BackfillForInvestorOptions {
   emails: string[];
+  domain: string | null;
   monthsBack: number;
   folders: string[];
   pageSize?: number;
   maxPages?: number;
 }
 
+const escapeOData = (s: string): string => s.replace(/'/g, "''");
+
+const buildSenderClause = (
+  emails: string[],
+  domain: string | null,
+): { clause: string; advanced: boolean } => {
+  const parts: string[] = [];
+  for (const e of emails) {
+    parts.push(`from/emailAddress/address eq '${escapeOData(e)}'`);
+  }
+  let advanced = false;
+  if (domain) {
+    parts.push(`endsWith(from/emailAddress/address, '@${escapeOData(domain)}')`);
+    advanced = true;
+  }
+  return { clause: parts.join(" or "), advanced };
+};
+
+const buildRecipientClause = (
+  emails: string[],
+  domain: string | null,
+): { clause: string; advanced: boolean } => {
+  const parts: string[] = [];
+  for (const e of emails) {
+    parts.push(
+      `toRecipients/any(r: r/emailAddress/address eq '${escapeOData(e)}')`,
+    );
+  }
+  let advanced = false;
+  if (domain) {
+    parts.push(
+      `toRecipients/any(r: endsWith(r/emailAddress/address, '@${escapeOData(domain)}'))`,
+    );
+    advanced = true;
+  }
+  return { clause: parts.join(" or "), advanced };
+};
+
 export const fetchMailForInvestor = async (
   options: BackfillForInvestorOptions,
 ): Promise<Message[]> => {
   const emails = options.emails.map((e) => e.trim()).filter((e) => e.length > 0);
-  if (emails.length === 0) return [];
+  const domain = options.domain?.trim().toLowerCase().replace(/^@/, "") || null;
+  if (emails.length === 0 && !domain) return [];
 
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - options.monthsBack);
@@ -228,10 +268,9 @@ export const fetchMailForInvestor = async (
   for (const folder of options.folders) {
     const folderId = await resolveFolderId(folder);
     if (!folderId) continue;
-    const senderClause = emails
-      .map((e) => `from/emailAddress/address eq '${e.replace(/'/g, "''")}'`)
-      .join(" or ");
-    const filter = `(receivedDateTime ge ${sinceIso}) and (${senderClause})`;
+    const sender = buildSenderClause(emails, domain);
+    if (!sender.clause) continue;
+    const filter = `(receivedDateTime ge ${sinceIso}) and (${sender.clause})`;
     await pageThrough(
       `/me/mailFolders/${folderId}/messages`,
       filter,
@@ -239,30 +278,32 @@ export const fetchMailForInvestor = async (
       maxPages,
       accountEmail,
       inserted,
+      sender.advanced,
     );
   }
 
-  // Sent items: fetch messages where any recipient is one of the investor's emails
+  // Sent items: fetch messages where any recipient is the investor's email or domain.
+  // This catches replies sent by anyone @<our-domain> (the team) to the investor.
   const sentFolderId = await resolveFolderId("sentitems");
   if (sentFolderId) {
-    const recipientClause = emails
-      .map(
-        (e) =>
-          `toRecipients/any(r: r/emailAddress/address eq '${e.replace(/'/g, "''")}')`,
-      )
-      .join(" or ");
-    const sentFilter = `(receivedDateTime ge ${sinceIso}) and (${recipientClause})`;
-    try {
-      await pageThrough(
-        `/me/mailFolders/${sentFolderId}/messages`,
-        sentFilter,
-        pageSize,
-        maxPages,
-        accountEmail,
-        inserted,
-      );
-    } catch (e) {
-      console.error(`[mail] sent-items recipient filter failed: ${(e as Error).message}`);
+    const recipient = buildRecipientClause(emails, domain);
+    if (recipient.clause) {
+      const sentFilter = `(receivedDateTime ge ${sinceIso}) and (${recipient.clause})`;
+      try {
+        await pageThrough(
+          `/me/mailFolders/${sentFolderId}/messages`,
+          sentFilter,
+          pageSize,
+          maxPages,
+          accountEmail,
+          inserted,
+          recipient.advanced,
+        );
+      } catch (e) {
+        console.error(
+          `[mail] sent-items recipient filter failed: ${(e as Error).message}`,
+        );
+      }
     }
   }
 
@@ -276,12 +317,17 @@ const pageThrough = async (
   maxPages: number,
   accountEmail: string | null,
   inserted: Message[],
+  advanced: boolean = false,
 ): Promise<void> => {
-  let url: string | null = `${folderPath}?$top=${pageSize}&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}`;
+  const countParam = advanced ? "&$count=true" : "";
+  let url: string | null = `${folderPath}?$top=${pageSize}&$orderby=receivedDateTime desc${countParam}&$filter=${encodeURIComponent(filter)}`;
   let pages = 0;
 
   while (url && pages < maxPages) {
-    const page: GraphPage<GraphMessage> = await graphFetch<GraphPage<GraphMessage>>(url);
+    const page: GraphPage<GraphMessage> = await graphFetch<GraphPage<GraphMessage>>(
+      url,
+      advanced ? { advanced: true } : undefined,
+    );
     for (const msg of page.value) {
       if (findMessageByExternalId("outlook_mail", msg.id)) continue;
       const fromAddr =

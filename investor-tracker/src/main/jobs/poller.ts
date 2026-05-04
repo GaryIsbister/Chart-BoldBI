@@ -5,7 +5,10 @@ import {
 } from "../graph/mail";
 import { listContactsForEntity } from "../store/repositories/contacts";
 import { getEntity } from "../store/repositories/entities";
-import { backfillMessagesByEmail } from "../store/repositories/messages";
+import {
+  backfillMessagesByDomain,
+  backfillMessagesByEmail,
+} from "../store/repositories/messages";
 import { fetchTeamsDelta } from "../graph/teams";
 import { getSettings } from "../store/repositories/settings";
 import type { Message } from "@shared/types";
@@ -101,12 +104,12 @@ export const runBackfillForInvestor = async (
   }
   const contacts = listContactsForEntity(entityId);
   const emails = contacts.map((c) => c.email);
-  if (emails.length === 0) {
+  if (emails.length === 0 && !entity.domain) {
     return {
       entityId,
       fetched: 0,
       linked: 0,
-      errors: ["no contact emails set for this investor"],
+      errors: ["no domain or contact emails set for this investor"],
     };
   }
 
@@ -115,6 +118,7 @@ export const runBackfillForInvestor = async (
   try {
     const messages = await fetchMailForInvestor({
       emails,
+      domain: entity.domain,
       monthsBack,
       folders: settings.watchedFolders,
     });
@@ -130,6 +134,15 @@ export const runBackfillForInvestor = async (
       linked += res.messages;
     } catch (e) {
       errors.push(`link ${contact.email}: ${(e as Error).message}`);
+    }
+  }
+
+  if (entity.domain) {
+    try {
+      const res = backfillMessagesByDomain(entity.domain, entityId);
+      linked += res.messages;
+    } catch (e) {
+      errors.push(`link domain ${entity.domain}: ${(e as Error).message}`);
     }
   }
 
