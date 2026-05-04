@@ -15,7 +15,6 @@ export const App = (): JSX.Element => {
           <NavLink to="/dashboard">Dashboard</NavLink>
           <NavLink to="/investors">Investors</NavLink>
           <NavLink to="/actions">Actions</NavLink>
-          <NavLink to="/pending">Pending Review</NavLink>
           <NavLink to="/settings">Settings</NavLink>
         </nav>
       </aside>

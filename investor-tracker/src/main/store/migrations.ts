@@ -160,6 +160,14 @@ const MIGRATIONS: Migration[] = [
       ALTER TABLE entities ADD COLUMN use_domain_matching INTEGER NOT NULL DEFAULT 1;
     `,
   },
+  {
+    version: 4,
+    name: "message_is_new",
+    sql: `
+      ALTER TABLE messages ADD COLUMN is_new INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX IF NOT EXISTS idx_messages_is_new ON messages(is_new);
+    `,
+  },
 ];
 
 export const runMigrations = (db: Database.Database): void => {

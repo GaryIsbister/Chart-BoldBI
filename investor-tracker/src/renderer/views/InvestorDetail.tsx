@@ -58,21 +58,32 @@ export const InvestorDetail = (): JSX.Element => {
   const [backfillMonths, setBackfillMonths] = useState<number>(6);
   const [backfilling, setBackfilling] = useState<boolean>(false);
   const [backfillStatus, setBackfillStatus] = useState<string>("");
+  const [newCount, setNewCount] = useState<number>(0);
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!id) return;
-    const [e, c, t, a] = await Promise.all([
+    const [e, c, t, a, n] = await Promise.all([
       invoke<Entity | null>(IPC_CHANNELS.ENTITIES_GET, id),
       invoke<Contact[]>(IPC_CHANNELS.CONTACTS_LIST_FOR_ENTITY, id),
       invoke<Thread[]>(IPC_CHANNELS.THREADS_LIST_FOR_ENTITY, id),
       invoke<ActionItem[]>(IPC_CHANNELS.ACTION_ITEMS_LIST, { entityId: id }),
+      invoke<Array<{ entityId: string; count: number }>>(IPC_CHANNELS.MESSAGES_NEW_COUNTS),
     ]);
     setEntity(e);
     setContacts(c);
     setThreads(t);
     setActionItems(a);
+    setNewCount(n.find((x) => x.entityId === id)?.count ?? 0);
     if (e) setNotes(e.notes ?? "");
   }, [id]);
+
+  const markAsRead = async (): Promise<void> => {
+    if (!id) return;
+    await invoke(IPC_CHANNELS.MESSAGES_MARK_ENTITY_READ, id);
+    setMessagesByThread({});
+    setExpandedThread(null);
+    await refresh();
+  };
 
   useEffect(() => {
     void refresh();
@@ -250,7 +261,30 @@ export const InvestorDetail = (): JSX.Element => {
   return (
     <div>
       <Link to="/investors" className="muted">&larr; All investors</Link>
-      <h2 style={{ marginTop: 8 }}>{entity.name}</h2>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}
+      >
+        <h2 style={{ margin: 0 }}>{entity.name}</h2>
+        {newCount > 0 && (
+          <>
+            <span
+              style={{
+                background: "#0969da",
+                color: "white",
+                padding: "2px 8px",
+                borderRadius: 12,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              {newCount} NEW
+            </span>
+            <button className="btn secondary" onClick={() => void markAsRead()}>
+              Mark as read
+            </button>
+          </>
+        )}
+      </div>
       <div className="muted">
         {entity.domain ?? "no domain"} · created {new Date(entity.createdAt).toLocaleDateString()}
       </div>
@@ -512,6 +546,21 @@ export const InvestorDetail = (): JSX.Element => {
                       <div className="muted" style={{ fontSize: 12 }}>
                         {m.isFromUs ? "US" : m.fromName ?? m.fromEmail} ·{" "}
                         {new Date(m.receivedAt).toLocaleString()}
+                        {m.isNew && (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              background: "#0969da",
+                              color: "white",
+                              padding: "1px 6px",
+                              borderRadius: 8,
+                              fontSize: 11,
+                              fontWeight: 600,
+                            }}
+                          >
+                            NEW
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: 13, marginTop: 4 }}>
                         {m.bodyPreview}

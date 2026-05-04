@@ -29,11 +29,14 @@ import {
 import { listContactsForEntity, upsertContact } from "../store/repositories/contacts";
 import {
   backfillMessagesByEmail,
+  countNewMessagesPerEntity,
   findSendersByName,
   listMessagesForThread,
   listThreadsForEntity,
+  markEntityMessagesAsRead,
   updateMessageEntity,
 } from "../store/repositories/messages";
+import { runCheckForNewEmails } from "../jobs/checkNewEmails";
 import { createActionItem, listActionItems, updateActionItemStatus } from "../store/repositories/actionItems";
 import {
   getPendingReview,
@@ -181,6 +184,15 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.MAIL_SEARCH_SENDERS, (_e, args: SearchSendersArgs) =>
     searchSendersByQuery(args.query, args.monthsBack),
   );
+
+  ipcMain.handle(IPC_CHANNELS.JOBS_CHECK_NEW_EMAILS, () => runCheckForNewEmails());
+  ipcMain.handle(IPC_CHANNELS.MESSAGES_MARK_ENTITY_READ, (_e, entityId: string) =>
+    markEntityMessagesAsRead(entityId),
+  );
+  ipcMain.handle(IPC_CHANNELS.MESSAGES_NEW_COUNTS, () => {
+    const map = countNewMessagesPerEntity();
+    return [...map.entries()].map(([entityId, count]) => ({ entityId, count }));
+  });
 
   ipcMain.handle(IPC_CHANNELS.THREADS_LIST_FOR_ENTITY, (_e, entityId: string) =>
     listThreadsForEntity(entityId),

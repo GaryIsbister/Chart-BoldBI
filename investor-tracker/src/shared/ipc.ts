@@ -60,6 +60,9 @@ export const IPC_CHANNELS = {
   JOBS_REFRESH_ENTITY_THREADS: "jobs:refreshEntityThreads",
   JOBS_BACKFILL_MAIL: "jobs:backfillMail",
   JOBS_BACKFILL_FOR_INVESTOR: "jobs:backfillForInvestor",
+  JOBS_CHECK_NEW_EMAILS: "jobs:checkNewEmails",
+  MESSAGES_MARK_ENTITY_READ: "messages:markEntityRead",
+  MESSAGES_NEW_COUNTS: "messages:newCounts",
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

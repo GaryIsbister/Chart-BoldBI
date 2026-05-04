@@ -88,6 +88,7 @@ export const Message = z.object({
   bodyPreview: z.string(),
   receivedAt: z.string(),
   isFromUs: z.boolean(),
+  isNew: z.boolean().optional(),
   raw: z.unknown().optional(),
 });
 export type Message = z.infer<typeof Message>;

@@ -16,6 +16,7 @@ interface MessageRow {
   body_preview: string;
   received_at: string;
   is_from_us: number;
+  is_new: number;
   raw: string | null;
 }
 
@@ -43,6 +44,7 @@ const rowToMessage = (row: MessageRow): Message => ({
   bodyPreview: row.body_preview,
   receivedAt: row.received_at,
   isFromUs: row.is_from_us === 1,
+  isNew: row.is_new === 1,
   raw: row.raw ? JSON.parse(row.raw) : undefined,
 });
 
@@ -124,6 +126,7 @@ export interface InsertMessageInput {
   bodyPreview: string;
   receivedAt: string;
   isFromUs: boolean;
+  isNew?: boolean;
   raw?: unknown;
 }
 
@@ -134,8 +137,8 @@ export const insertMessage = (input: InsertMessageInput): Message => {
   const id = uuid();
   db.prepare(
     `INSERT INTO messages
-     (id, source, external_id, thread_id, contact_id, entity_id, from_email, from_name, to_emails, subject, body_preview, received_at, is_from_us, raw)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (id, source, external_id, thread_id, contact_id, entity_id, from_email, from_name, to_emails, subject, body_preview, received_at, is_from_us, is_new, raw)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     input.source,
@@ -150,9 +153,38 @@ export const insertMessage = (input: InsertMessageInput): Message => {
     input.bodyPreview,
     input.receivedAt,
     input.isFromUs ? 1 : 0,
+    input.isNew ? 1 : 0,
     input.raw ? JSON.stringify(input.raw) : null,
   );
   return findMessageByExternalId(input.source, input.externalId)!;
+};
+
+export const markEntityMessagesAsRead = (entityId: string): number => {
+  const db = getDb();
+  const res = db
+    .prepare(`UPDATE messages SET is_new = 0 WHERE entity_id = ? AND is_new = 1`)
+    .run(entityId);
+  return res.changes;
+};
+
+export const markAllMessagesAsRead = (): number => {
+  const db = getDb();
+  const res = db.prepare(`UPDATE messages SET is_new = 0 WHERE is_new = 1`).run();
+  return res.changes;
+};
+
+export const countNewMessagesPerEntity = (): Map<string, number> => {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT entity_id, COUNT(*) AS cnt FROM messages
+       WHERE is_new = 1 AND entity_id IS NOT NULL
+       GROUP BY entity_id`,
+    )
+    .all() as Array<{ entity_id: string; cnt: number }>;
+  const map = new Map<string, number>();
+  for (const r of rows) map.set(r.entity_id, r.cnt);
+  return map;
 };
 
 export const updateMessageEntity = (id: string, entityId: string | null): void => {
