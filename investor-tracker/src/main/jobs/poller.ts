@@ -51,6 +51,13 @@ export const runPoller = async (): Promise<PollerResult> => {
   }
 
   try {
+    const fetched = await fetchMailDelta({ folder: "sentitems" });
+    newMail += fetched.length;
+  } catch (e) {
+    errors.push(`mail:sentitems: ${(e as Error).message}`);
+  }
+
+  try {
     const fetched = await fetchTeamsDelta();
     newTeams += fetched.length;
     attachKnownContacts(fetched);

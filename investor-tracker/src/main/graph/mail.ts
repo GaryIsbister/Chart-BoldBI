@@ -232,53 +232,95 @@ export const fetchMailForInvestor = async (
       .map((e) => `from/emailAddress/address eq '${e.replace(/'/g, "''")}'`)
       .join(" or ");
     const filter = `(receivedDateTime ge ${sinceIso}) and (${senderClause})`;
-    const folderPath = `/me/mailFolders/${folderId}/messages`;
-    let url: string | null = `${folderPath}?$top=${pageSize}&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}`;
-    let pages = 0;
+    await pageThrough(
+      `/me/mailFolders/${folderId}/messages`,
+      filter,
+      pageSize,
+      maxPages,
+      accountEmail,
+      inserted,
+    );
+  }
 
-    while (url && pages < maxPages) {
-      const page: GraphPage<GraphMessage> = await graphFetch<GraphPage<GraphMessage>>(url);
-      for (const msg of page.value) {
-        if (findMessageByExternalId("outlook_mail", msg.id)) continue;
-        const fromAddr =
-          msg.from?.emailAddress?.address ?? msg.sender?.emailAddress?.address ?? "";
-        const fromName =
-          msg.from?.emailAddress?.name ?? msg.sender?.emailAddress?.name ?? null;
-        const toEmails = (msg.toRecipients ?? [])
-          .map((r) => r.emailAddress?.address ?? "")
-          .filter((s) => s.length > 0);
-        const isFromUs =
-          accountEmail !== null && fromAddr.toLowerCase() === accountEmail;
-
-        const thread = upsertThread({
-          source: "outlook_mail",
-          externalConversationId: msg.conversationId,
-          subject: msg.subject,
-          lastMessageAt: msg.receivedDateTime,
-        });
-
-        const stored = insertMessage({
-          source: "outlook_mail",
-          externalId: msg.id,
-          threadId: thread.id,
-          contactId: null,
-          entityId: null,
-          fromEmail: fromAddr,
-          fromName,
-          toEmails,
-          subject: msg.subject,
-          bodyPreview: msg.bodyPreview,
-          receivedAt: msg.receivedDateTime,
-          isFromUs,
-          raw: msg,
-        });
-        inserted.push(stored);
-      }
-      url = page["@odata.nextLink"] ?? null;
-      pages += 1;
+  // Sent items: fetch messages where any recipient is one of the investor's emails
+  const sentFolderId = await resolveFolderId("sentitems");
+  if (sentFolderId) {
+    const recipientClause = emails
+      .map(
+        (e) =>
+          `toRecipients/any(r: r/emailAddress/address eq '${e.replace(/'/g, "''")}')`,
+      )
+      .join(" or ");
+    const sentFilter = `(receivedDateTime ge ${sinceIso}) and (${recipientClause})`;
+    try {
+      await pageThrough(
+        `/me/mailFolders/${sentFolderId}/messages`,
+        sentFilter,
+        pageSize,
+        maxPages,
+        accountEmail,
+        inserted,
+      );
+    } catch (e) {
+      console.error(`[mail] sent-items recipient filter failed: ${(e as Error).message}`);
     }
   }
+
   return inserted;
+};
+
+const pageThrough = async (
+  folderPath: string,
+  filter: string,
+  pageSize: number,
+  maxPages: number,
+  accountEmail: string | null,
+  inserted: Message[],
+): Promise<void> => {
+  let url: string | null = `${folderPath}?$top=${pageSize}&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}`;
+  let pages = 0;
+
+  while (url && pages < maxPages) {
+    const page: GraphPage<GraphMessage> = await graphFetch<GraphPage<GraphMessage>>(url);
+    for (const msg of page.value) {
+      if (findMessageByExternalId("outlook_mail", msg.id)) continue;
+      const fromAddr =
+        msg.from?.emailAddress?.address ?? msg.sender?.emailAddress?.address ?? "";
+      const fromName =
+        msg.from?.emailAddress?.name ?? msg.sender?.emailAddress?.name ?? null;
+      const toEmails = (msg.toRecipients ?? [])
+        .map((r) => r.emailAddress?.address ?? "")
+        .filter((s) => s.length > 0);
+      const isFromUs =
+        accountEmail !== null && fromAddr.toLowerCase() === accountEmail;
+
+      const thread = upsertThread({
+        source: "outlook_mail",
+        externalConversationId: msg.conversationId,
+        subject: msg.subject,
+        lastMessageAt: msg.receivedDateTime,
+      });
+
+      const stored = insertMessage({
+        source: "outlook_mail",
+        externalId: msg.id,
+        threadId: thread.id,
+        contactId: null,
+        entityId: null,
+        fromEmail: fromAddr,
+        fromName,
+        toEmails,
+        subject: msg.subject,
+        bodyPreview: msg.bodyPreview,
+        receivedAt: msg.receivedDateTime,
+        isFromUs,
+        raw: msg,
+      });
+      inserted.push(stored);
+    }
+    url = page["@odata.nextLink"] ?? null;
+    pages += 1;
+  }
 };
 
 export interface BackfillMailOptions {
