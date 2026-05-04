@@ -168,6 +168,17 @@ export const InvestorDetail = (): JSX.Element => {
     await refresh();
   };
 
+  const updateActionDueDate = async (
+    actionId: string,
+    dueDate: string,
+  ): Promise<void> => {
+    await invoke(IPC_CHANNELS.ACTION_ITEMS_UPDATE_DUE_DATE, {
+      id: actionId,
+      dueDate: dueDate || null,
+    });
+    await refresh();
+  };
+
   const addActionItem = async (): Promise<void> => {
     if (!id || !newAction.description.trim()) return;
     await invoke(IPC_CHANNELS.ACTION_ITEMS_CREATE, {
@@ -466,7 +477,16 @@ export const InvestorDetail = (): JSX.Element => {
                   </td>
                   <td>{a.ownerSide}</td>
                   <td>{a.description}</td>
-                  <td>{a.dueDate ?? "—"}</td>
+                  <td>
+                    <input
+                      type="date"
+                      value={a.dueDate ?? ""}
+                      onChange={(e) =>
+                        void updateActionDueDate(a.id, e.target.value)
+                      }
+                      style={{ width: "auto" }}
+                    />
+                  </td>
                   <td>
                     {a.sourceDate
                       ? new Date(a.sourceDate).toLocaleDateString()

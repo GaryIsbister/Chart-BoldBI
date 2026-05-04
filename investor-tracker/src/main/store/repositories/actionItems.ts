@@ -120,5 +120,16 @@ export const updateActionItemStatus = (
   return getActionItem(id);
 };
 
+export const updateActionItemDueDate = (
+  id: string,
+  dueDate: string | null,
+): ActionItem | null => {
+  const db = getDb();
+  db.prepare(
+    `UPDATE action_items SET due_date = ?, updated_at = ? WHERE id = ?`,
+  ).run(dueDate, nowIso(), id);
+  return getActionItem(id);
+};
+
 export const listOpenActionItemsForEntity = (entityId: string): ActionItem[] =>
   listActionItems({ entityId, status: "open" });

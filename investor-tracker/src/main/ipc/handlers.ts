@@ -7,6 +7,7 @@ import {
   type CreateEntityArgs,
   type DecidePendingReviewArgs,
   type SearchSendersArgs,
+  type UpdateActionItemDueDateArgs,
   type UpdateActionItemStatusArgs,
   type UpdateEntityCategoryArgs,
   type UpdateEntityNotesArgs,
@@ -38,7 +39,12 @@ import {
   updateMessageEntity,
 } from "../store/repositories/messages";
 import { runCheckForNewEmails } from "../jobs/checkNewEmails";
-import { createActionItem, listActionItems, updateActionItemStatus } from "../store/repositories/actionItems";
+import {
+  createActionItem,
+  listActionItems,
+  updateActionItemDueDate,
+  updateActionItemStatus,
+} from "../store/repositories/actionItems";
 import {
   getPendingReview,
   listOpenPendingReviews,
@@ -212,6 +218,11 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   );
   ipcMain.handle(IPC_CHANNELS.ACTION_ITEMS_UPDATE_STATUS, (_e, args: UpdateActionItemStatusArgs) =>
     updateActionItemStatus(args.id, args.status, null),
+  );
+  ipcMain.handle(
+    IPC_CHANNELS.ACTION_ITEMS_UPDATE_DUE_DATE,
+    (_e, args: UpdateActionItemDueDateArgs) =>
+      updateActionItemDueDate(args.id, args.dueDate),
   );
   ipcMain.handle(IPC_CHANNELS.ACTION_ITEMS_CREATE, (_e, args: CreateActionItemArgs) =>
     createActionItem({

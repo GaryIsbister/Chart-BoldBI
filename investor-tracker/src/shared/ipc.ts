@@ -45,6 +45,7 @@ export const IPC_CHANNELS = {
   // Action items
   ACTION_ITEMS_LIST: "actionItems:list",
   ACTION_ITEMS_UPDATE_STATUS: "actionItems:updateStatus",
+  ACTION_ITEMS_UPDATE_DUE_DATE: "actionItems:updateDueDate",
   ACTION_ITEMS_CREATE: "actionItems:create",
 
   // Pending review
@@ -91,6 +92,11 @@ export interface CreateActionItemArgs {
   description: string;
   ownerSide: ActionItem["ownerSide"];
   dueDate?: string | null;
+}
+
+export interface UpdateActionItemDueDateArgs {
+  id: string;
+  dueDate: string | null;
 }
 
 export interface UpdateEntityStageArgs {

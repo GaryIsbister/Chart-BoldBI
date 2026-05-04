@@ -61,6 +61,14 @@ export const Actions = (): JSX.Element => {
     await refresh();
   };
 
+  const updateDueDate = async (id: string, dueDate: string): Promise<void> => {
+    await invoke(IPC_CHANNELS.ACTION_ITEMS_UPDATE_DUE_DATE, {
+      id,
+      dueDate: dueDate || null,
+    });
+    await refresh();
+  };
+
   const filtered = useMemo(() => {
     const txt = filters.text.trim().toLowerCase();
     return items.filter((a) => {
@@ -271,8 +279,14 @@ export const Actions = (): JSX.Element => {
                   >
                     {a.description}
                   </td>
-                  <td onClick={() => navigate(`/investors/${a.entityId}`)}>
-                    {a.dueDate ?? "—"}
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="date"
+                      value={a.dueDate ?? ""}
+                      onChange={(e) => void updateDueDate(a.id, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ width: "auto" }}
+                    />
                   </td>
                   <td onClick={() => navigate(`/investors/${a.entityId}`)}>
                     {a.status}
