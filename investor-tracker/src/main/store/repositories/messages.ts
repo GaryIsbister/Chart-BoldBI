@@ -167,6 +167,14 @@ export const markEntityMessagesAsRead = (entityId: string): number => {
   return res.changes;
 };
 
+export const markMessageReadState = (id: string, isNew: boolean): number => {
+  const db = getDb();
+  const res = db
+    .prepare(`UPDATE messages SET is_new = ? WHERE id = ?`)
+    .run(isNew ? 1 : 0, id);
+  return res.changes;
+};
+
 export const markAllMessagesAsRead = (): number => {
   const db = getDb();
   const res = db.prepare(`UPDATE messages SET is_new = 0 WHERE is_new = 1`).run();

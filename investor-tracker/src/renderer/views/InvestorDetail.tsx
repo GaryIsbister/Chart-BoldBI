@@ -85,6 +85,23 @@ export const InvestorDetail = (): JSX.Element => {
     await refresh();
   };
 
+  const toggleMessageRead = async (
+    messageId: string,
+    isNew: boolean,
+  ): Promise<void> => {
+    await invoke(IPC_CHANNELS.MESSAGES_TOGGLE_READ, { id: messageId, isNew });
+    setMessagesByThread((prev) => {
+      const next = { ...prev };
+      for (const tid of Object.keys(next)) {
+        next[tid] = next[tid]!.map((m) =>
+          m.id === messageId ? { ...m, isNew } : m,
+        );
+      }
+      return next;
+    });
+    await refresh();
+  };
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -543,23 +560,60 @@ export const InvestorDetail = (): JSX.Element => {
                         borderTop: "1px solid var(--border)",
                       }}
                     >
-                      <div className="muted" style={{ fontSize: 12 }}>
-                        {m.isFromUs ? "US" : m.fromName ?? m.fromEmail} ·{" "}
-                        {new Date(m.receivedAt).toLocaleString()}
-                        {m.isNew && (
-                          <span
+                      <div
+                        className="muted"
+                        style={{
+                          fontSize: 12,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span>
+                          {m.isFromUs ? "US" : m.fromName ?? m.fromEmail} ·{" "}
+                          {new Date(m.receivedAt).toLocaleString()}
+                        </span>
+                        {m.isNew ? (
+                          <button
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              void toggleMessageRead(m.id, false);
+                            }}
+                            title="Mark as read"
                             style={{
-                              marginLeft: 6,
                               background: "#0969da",
                               color: "white",
                               padding: "1px 6px",
                               borderRadius: 8,
                               fontSize: 11,
                               fontWeight: 600,
+                              border: "none",
+                              cursor: "pointer",
+                              width: "auto",
                             }}
                           >
-                            NEW
-                          </span>
+                            NEW ✕
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              void toggleMessageRead(m.id, true);
+                            }}
+                            title="Mark as new"
+                            style={{
+                              background: "transparent",
+                              color: "var(--muted)",
+                              padding: "1px 6px",
+                              borderRadius: 8,
+                              fontSize: 11,
+                              border: "1px solid var(--border)",
+                              cursor: "pointer",
+                              width: "auto",
+                            }}
+                          >
+                            mark unread
+                          </button>
                         )}
                       </div>
                       <div style={{ fontSize: 13, marginTop: 4 }}>

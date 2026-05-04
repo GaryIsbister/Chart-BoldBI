@@ -34,6 +34,7 @@ import {
   listMessagesForThread,
   listThreadsForEntity,
   markEntityMessagesAsRead,
+  markMessageReadState,
   updateMessageEntity,
 } from "../store/repositories/messages";
 import { runCheckForNewEmails } from "../jobs/checkNewEmails";
@@ -188,6 +189,11 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.JOBS_CHECK_NEW_EMAILS, () => runCheckForNewEmails());
   ipcMain.handle(IPC_CHANNELS.MESSAGES_MARK_ENTITY_READ, (_e, entityId: string) =>
     markEntityMessagesAsRead(entityId),
+  );
+  ipcMain.handle(
+    IPC_CHANNELS.MESSAGES_TOGGLE_READ,
+    (_e, args: { id: string; isNew: boolean }) =>
+      markMessageReadState(args.id, args.isNew),
   );
   ipcMain.handle(IPC_CHANNELS.MESSAGES_NEW_COUNTS, () => {
     const map = countNewMessagesPerEntity();

@@ -62,6 +62,7 @@ export const IPC_CHANNELS = {
   JOBS_BACKFILL_FOR_INVESTOR: "jobs:backfillForInvestor",
   JOBS_CHECK_NEW_EMAILS: "jobs:checkNewEmails",
   MESSAGES_MARK_ENTITY_READ: "messages:markEntityRead",
+  MESSAGES_TOGGLE_READ: "messages:toggleRead",
   MESSAGES_NEW_COUNTS: "messages:newCounts",
 } as const;
 
