@@ -30,6 +30,7 @@ export const IPC_CHANNELS = {
   ENTITIES_UPDATE_STAGE: "entities:updateStage",
   ENTITIES_UPDATE_NOTES: "entities:updateNotes",
   ENTITIES_UPDATE_CATEGORY: "entities:updateCategory",
+  ENTITIES_UPDATE_USE_DOMAIN: "entities:updateUseDomain",
 
   // Contacts
   CONTACTS_LIST_FOR_ENTITY: "contacts:listForEntity",
@@ -102,6 +103,7 @@ export interface UpdateEntityNotesArgs {
 export interface CreateEntityArgs {
   name: string;
   domain?: string | null;
+  useDomainMatching?: boolean;
   pipelineStage?: PipelineStage;
   category?: EntityCategory;
   notes?: string | null;
@@ -111,6 +113,11 @@ export interface CreateEntityArgs {
 export interface UpdateEntityCategoryArgs {
   id: string;
   category: EntityCategory;
+}
+
+export interface UpdateEntityUseDomainArgs {
+  id: string;
+  useDomainMatching: boolean;
 }
 
 export interface CreateContactArgs {

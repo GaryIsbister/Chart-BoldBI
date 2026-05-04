@@ -5,6 +5,7 @@ import { IPC_CHANNELS, type SenderCandidate } from "@shared/ipc";
 import {
   ENTITY_CATEGORIES,
   PIPELINE_STAGES,
+  isGenericDomain,
   type ActionItem,
   type ActionItemOwner,
   type ActionItemStatus,
@@ -86,6 +87,15 @@ export const InvestorDetail = (): JSX.Element => {
   const updateCategory = async (category: EntityCategory): Promise<void> => {
     if (!id) return;
     await invoke<Entity>(IPC_CHANNELS.ENTITIES_UPDATE_CATEGORY, { id, category });
+    await refresh();
+  };
+
+  const updateUseDomain = async (useDomainMatching: boolean): Promise<void> => {
+    if (!id) return;
+    await invoke<Entity>(IPC_CHANNELS.ENTITIES_UPDATE_USE_DOMAIN, {
+      id,
+      useDomainMatching,
+    });
     await refresh();
   };
 
@@ -280,6 +290,36 @@ export const InvestorDetail = (): JSX.Element => {
             <div>{new Date(entity.updatedAt).toLocaleString()}</div>
           </div>
         </div>
+        {entity.domain && (
+          <label
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "flex-start",
+              marginTop: 12,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={entity.useDomainMatching}
+              onChange={(e) => void updateUseDomain(e.target.checked)}
+              style={{ width: "auto", marginTop: 4 }}
+            />
+            <span>
+              Match all emails from <strong>@{entity.domain}</strong>
+              {isGenericDomain(entity.domain) && (
+                <div style={{ fontSize: 12, color: "#bf8700" }}>
+                  ⚠ Generic email provider. Leave this off and rely on specific
+                  contact emails.
+                </div>
+              )}
+              <div className="muted" style={{ fontSize: 12 }}>
+                On: every sender at {entity.domain} matches this investor.
+                Off: only the contact emails below match.
+              </div>
+            </span>
+          </label>
+        )}
       </div>
 
       <div className="card">

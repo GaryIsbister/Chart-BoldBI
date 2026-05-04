@@ -104,12 +104,19 @@ export const runBackfillForInvestor = async (
   }
   const contacts = listContactsForEntity(entityId);
   const emails = contacts.map((c) => c.email);
-  if (emails.length === 0 && !entity.domain) {
+  const effectiveDomain =
+    entity.useDomainMatching && entity.domain ? entity.domain : null;
+
+  if (emails.length === 0 && !effectiveDomain) {
     return {
       entityId,
       fetched: 0,
       linked: 0,
-      errors: ["no domain or contact emails set for this investor"],
+      errors: [
+        entity.domain && !entity.useDomainMatching
+          ? "domain matching is disabled for this investor and no contact emails are set — add at least one contact email"
+          : "no domain or contact emails set for this investor",
+      ],
     };
   }
 
@@ -118,7 +125,7 @@ export const runBackfillForInvestor = async (
   try {
     const messages = await fetchMailForInvestor({
       emails,
-      domain: entity.domain,
+      domain: effectiveDomain,
       monthsBack,
       folders: settings.watchedFolders,
     });
@@ -137,12 +144,12 @@ export const runBackfillForInvestor = async (
     }
   }
 
-  if (entity.domain) {
+  if (effectiveDomain) {
     try {
-      const res = backfillMessagesByDomain(entity.domain, entityId);
+      const res = backfillMessagesByDomain(effectiveDomain, entityId);
       linked += res.messages;
     } catch (e) {
-      errors.push(`link domain ${entity.domain}: ${(e as Error).message}`);
+      errors.push(`link domain ${effectiveDomain}: ${(e as Error).message}`);
     }
   }
 

@@ -11,6 +11,7 @@ import {
   type UpdateEntityCategoryArgs,
   type UpdateEntityNotesArgs,
   type UpdateEntityStageArgs,
+  type UpdateEntityUseDomainArgs,
 } from "@shared/ipc";
 import { KEYCHAIN_KEYS, keychain } from "../keychain";
 import { resetClaudeClient } from "../claude/client";
@@ -21,6 +22,7 @@ import {
   updateEntityCategory,
   updateEntityNotes,
   updateEntityStage,
+  updateEntityUseDomainMatching,
   findEntityByName,
   createEntity,
 } from "../store/repositories/entities";
@@ -135,10 +137,14 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.ENTITIES_UPDATE_CATEGORY, (_e, args: UpdateEntityCategoryArgs) =>
     updateEntityCategory(args.id, args.category),
   );
+  ipcMain.handle(IPC_CHANNELS.ENTITIES_UPDATE_USE_DOMAIN, (_e, args: UpdateEntityUseDomainArgs) =>
+    updateEntityUseDomainMatching(args.id, args.useDomainMatching),
+  );
   ipcMain.handle(IPC_CHANNELS.ENTITIES_CREATE, (_e, args: CreateEntityArgs) => {
     const entity = createEntity({
       name: args.name,
       domain: args.domain ?? null,
+      useDomainMatching: args.useDomainMatching,
       pipelineStage: args.pipelineStage,
       category: args.category,
       notes: args.notes ?? null,

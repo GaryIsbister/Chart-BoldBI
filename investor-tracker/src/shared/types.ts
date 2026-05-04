@@ -32,6 +32,7 @@ export const Entity = z.object({
   id: z.string().uuid(),
   name: z.string(),
   domain: z.string().nullable(),
+  useDomainMatching: z.boolean(),
   category: z.enum(ENTITY_CATEGORIES),
   pipelineStage: z.enum(PIPELINE_STAGES),
   parkedUntil: z.string().nullable(),
@@ -41,6 +42,27 @@ export const Entity = z.object({
   updatedAt: z.string(),
 });
 export type Entity = z.infer<typeof Entity>;
+
+export const GENERIC_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "googlemail.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "yahoo.com",
+  "yahoo.co.uk",
+  "icloud.com",
+  "me.com",
+  "aol.com",
+  "protonmail.com",
+  "proton.me",
+  "msn.com",
+]);
+
+export const isGenericDomain = (domain: string | null | undefined): boolean => {
+  if (!domain) return false;
+  return GENERIC_EMAIL_DOMAINS.has(domain.toLowerCase().replace(/^@/, ""));
+};
 
 export const Contact = z.object({
   id: z.string().uuid(),

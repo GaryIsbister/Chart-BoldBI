@@ -12,6 +12,7 @@ interface EntityRow {
   id: string;
   name: string;
   domain: string | null;
+  use_domain_matching: number;
   category: string;
   pipeline_stage: string;
   parked_until: string | null;
@@ -25,6 +26,7 @@ const rowToEntity = (row: EntityRow): Entity => ({
   id: row.id,
   name: row.name,
   domain: row.domain,
+  useDomainMatching: row.use_domain_matching === 1,
   category: (row.category as EntityCategory) ?? "investor",
   pipelineStage: row.pipeline_stage as PipelineStage,
   parkedUntil: row.parked_until,
@@ -49,9 +51,11 @@ export const getEntity = (id: string): Entity | null => {
 
 export const findEntityByDomain = (domain: string): Entity | null => {
   const db = getDb();
-  const row = db.prepare("SELECT * FROM entities WHERE domain = ?").get(domain) as
-    | EntityRow
-    | undefined;
+  const row = db
+    .prepare(
+      "SELECT * FROM entities WHERE domain = ? AND use_domain_matching = 1",
+    )
+    .get(domain) as EntityRow | undefined;
   return row ? rowToEntity(row) : null;
 };
 
@@ -69,6 +73,7 @@ export interface CreateEntityInput {
   pipelineStage?: PipelineStage;
   category?: EntityCategory;
   notes?: string | null;
+  useDomainMatching?: boolean;
 }
 
 export const createEntity = (input: CreateEntityInput): Entity => {
@@ -77,11 +82,22 @@ export const createEntity = (input: CreateEntityInput): Entity => {
   const id = uuid();
   const stage: PipelineStage = input.pipelineStage ?? "new";
   const category: EntityCategory = input.category ?? "investor";
+  const useDomainMatching = input.useDomainMatching ?? Boolean(input.domain);
   db.prepare(
     `INSERT INTO entities
-     (id, name, domain, category, pipeline_stage, parked_until, stage_manual_override, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, NULL, 0, ?, ?, ?)`,
-  ).run(id, input.name, input.domain, category, stage, input.notes ?? null, now, now);
+     (id, name, domain, use_domain_matching, category, pipeline_stage, parked_until, stage_manual_override, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, 0, ?, ?, ?)`,
+  ).run(
+    id,
+    input.name,
+    input.domain,
+    useDomainMatching ? 1 : 0,
+    category,
+    stage,
+    input.notes ?? null,
+    now,
+    now,
+  );
   recordStageChange(db, {
     entityId: id,
     fromStage: null,
@@ -100,6 +116,17 @@ export const updateEntityCategory = (
   db.prepare(
     "UPDATE entities SET category = ?, updated_at = ? WHERE id = ?",
   ).run(category, nowIso(), id);
+  return getEntity(id);
+};
+
+export const updateEntityUseDomainMatching = (
+  id: string,
+  useDomainMatching: boolean,
+): Entity | null => {
+  const db = getDb();
+  db.prepare(
+    "UPDATE entities SET use_domain_matching = ?, updated_at = ? WHERE id = ?",
+  ).run(useDomainMatching ? 1 : 0, nowIso(), id);
   return getEntity(id);
 };
 

@@ -5,6 +5,7 @@ import { IPC_CHANNELS, type SenderCandidate } from "@shared/ipc";
 import {
   ENTITY_CATEGORIES,
   PIPELINE_STAGES,
+  isGenericDomain,
   type Entity,
   type EntityCategory,
   type PipelineStage,
@@ -13,6 +14,7 @@ import {
 interface NewInvestorDraft {
   name: string;
   domain: string;
+  useDomainMatching: boolean;
   stage: PipelineStage;
   category: EntityCategory;
   emails: string;
@@ -22,6 +24,7 @@ interface NewInvestorDraft {
 const emptyDraft = (): NewInvestorDraft => ({
   name: "",
   domain: "",
+  useDomainMatching: true,
   stage: "new",
   category: "investor",
   emails: "",
@@ -113,6 +116,7 @@ export const Investors = (): JSX.Element => {
       const created = await invoke<Entity>(IPC_CHANNELS.ENTITIES_CREATE, {
         name: draft.name.trim(),
         domain: draft.domain.trim() || null,
+        useDomainMatching: draft.useDomainMatching && Boolean(draft.domain.trim()),
         pipelineStage: draft.stage,
         category: draft.category,
         notes: draft.notes.trim() || null,
@@ -169,6 +173,7 @@ export const Investors = (): JSX.Element => {
       const created = await invoke<Entity>(IPC_CHANNELS.ENTITIES_CREATE, {
         name: search.newName.trim(),
         domain: null,
+        useDomainMatching: false,
         pipelineStage: search.stage,
         category: search.category,
         notes: search.notes.trim() || null,
@@ -407,11 +412,52 @@ export const Investors = (): JSX.Element => {
               <label>Domain (optional)</label>
               <input
                 value={draft.domain}
-                onChange={(e) => setDraft({ ...draft, domain: e.target.value })}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setDraft({
+                    ...draft,
+                    domain: next,
+                    useDomainMatching: !isGenericDomain(next),
+                  });
+                }}
                 placeholder="e.g. swedfund.se"
               />
             </div>
           </div>
+          {draft.domain.trim() && (
+            <div className="form-group">
+              <label
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={draft.useDomainMatching}
+                  onChange={(e) =>
+                    setDraft({ ...draft, useDomainMatching: e.target.checked })
+                  }
+                  style={{ width: "auto", marginTop: 4 }}
+                />
+                <span>
+                  Match all emails from this domain
+                  {isGenericDomain(draft.domain) && (
+                    <div style={{ fontSize: 12, color: "#bf8700" }}>
+                      ⚠ &quot;{draft.domain}&quot; looks like a generic email
+                      provider. Leave this unchecked and rely on specific
+                      contact emails instead.
+                    </div>
+                  )}
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    On: every email from anyone @{draft.domain} gets pulled in.
+                    Off: only emails from the contact addresses below match.
+                  </div>
+                </span>
+              </label>
+            </div>
+          )}
           <div className="row">
             <div>
               <label>Pipeline stage</label>

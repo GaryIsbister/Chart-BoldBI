@@ -153,6 +153,13 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category);
     `,
   },
+  {
+    version: 3,
+    name: "entity_use_domain_matching",
+    sql: `
+      ALTER TABLE entities ADD COLUMN use_domain_matching INTEGER NOT NULL DEFAULT 1;
+    `,
+  },
 ];
 
 export const runMigrations = (db: Database.Database): void => {
