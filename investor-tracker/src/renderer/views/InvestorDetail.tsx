@@ -59,21 +59,27 @@ export const InvestorDetail = (): JSX.Element => {
   const [backfilling, setBackfilling] = useState<boolean>(false);
   const [backfillStatus, setBackfillStatus] = useState<string>("");
   const [newCount, setNewCount] = useState<number>(0);
+  const [newPerThread, setNewPerThread] = useState<Map<string, number>>(new Map());
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!id) return;
-    const [e, c, t, a, n] = await Promise.all([
+    const [e, c, t, a, n, threadCounts] = await Promise.all([
       invoke<Entity | null>(IPC_CHANNELS.ENTITIES_GET, id),
       invoke<Contact[]>(IPC_CHANNELS.CONTACTS_LIST_FOR_ENTITY, id),
       invoke<Thread[]>(IPC_CHANNELS.THREADS_LIST_FOR_ENTITY, id),
       invoke<ActionItem[]>(IPC_CHANNELS.ACTION_ITEMS_LIST, { entityId: id }),
       invoke<Array<{ entityId: string; count: number }>>(IPC_CHANNELS.MESSAGES_NEW_COUNTS),
+      invoke<Array<{ threadId: string; count: number }>>(
+        IPC_CHANNELS.MESSAGES_NEW_COUNTS_BY_THREAD,
+        id,
+      ),
     ]);
     setEntity(e);
     setContacts(c);
     setThreads(t);
     setActionItems(a);
     setNewCount(n.find((x) => x.entityId === id)?.count ?? 0);
+    setNewPerThread(new Map(threadCounts.map((tc) => [tc.threadId, tc.count])));
     if (e) setNotes(e.notes ?? "");
   }, [id]);
 
@@ -100,6 +106,20 @@ export const InvestorDetail = (): JSX.Element => {
       return next;
     });
     await refresh();
+  };
+
+  const messageWebLink = (m: Message): string | null => {
+    const raw = m.raw as { webLink?: string } | undefined;
+    return raw?.webLink ?? null;
+  };
+
+  const openMessageInOutlook = async (m: Message): Promise<void> => {
+    const url = messageWebLink(m);
+    if (!url) return;
+    await invoke(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, url);
+    if (m.isNew) {
+      await toggleMessageRead(m.id, false);
+    }
   };
 
   useEffect(() => {
@@ -548,20 +568,47 @@ export const InvestorDetail = (): JSX.Element => {
         {threads.length === 0 ? (
           <div className="muted">No threads yet.</div>
         ) : (
-          threads.map((t) => (
+          threads.map((t) => {
+            const threadNew = newPerThread.get(t.id) ?? 0;
+            return (
             <div
               key={t.id}
               style={{
                 borderBottom: "1px solid var(--border)",
-                padding: "8px 0",
+                padding: "8px 0 8px 8px",
+                borderLeft: threadNew > 0 ? "3px solid #0969da" : "3px solid transparent",
+                background: threadNew > 0 ? "rgba(9, 105, 218, 0.06)" : "transparent",
+                marginLeft: -8,
+                paddingLeft: 8,
               }}
             >
               <div
                 onClick={() => void toggleThread(t.id)}
                 style={{ cursor: "pointer" }}
               >
-                <div style={{ fontWeight: 500 }}>
-                  {t.subject ?? "(no subject)"}
+                <div
+                  style={{
+                    fontWeight: threadNew > 0 ? 700 : 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span>{t.subject ?? "(no subject)"}</span>
+                  {threadNew > 0 && (
+                    <span
+                      style={{
+                        background: "#0969da",
+                        color: "white",
+                        padding: "1px 6px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {threadNew} NEW
+                    </span>
+                  )}
                 </div>
                 <div className="muted" style={{ fontSize: 12 }}>
                   {t.source} · {new Date(t.lastMessageAt).toLocaleString()}
@@ -572,79 +619,114 @@ export const InvestorDetail = (): JSX.Element => {
               </div>
               {expandedThread === t.id && messagesByThread[t.id] && (
                 <div style={{ marginTop: 8, paddingLeft: 16 }}>
-                  {messagesByThread[t.id]!.map((m) => (
-                    <div
-                      key={m.id}
-                      style={{
-                        padding: "6px 0",
-                        borderTop: "1px solid var(--border)",
-                      }}
-                    >
+                  {messagesByThread[t.id]!.map((m) => {
+                    const link = messageWebLink(m);
+                    return (
                       <div
-                        className="muted"
+                        key={m.id}
                         style={{
-                          fontSize: 12,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
+                          padding: "6px 0",
+                          borderTop: "1px solid var(--border)",
                         }}
                       >
-                        <span>
-                          {m.isFromUs ? "US" : m.fromName ?? m.fromEmail} ·{" "}
-                          {new Date(m.receivedAt).toLocaleString()}
-                        </span>
-                        {m.isNew ? (
-                          <button
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              void toggleMessageRead(m.id, false);
-                            }}
-                            title="Mark as read"
-                            style={{
-                              background: "#0969da",
-                              color: "white",
-                              padding: "1px 6px",
-                              borderRadius: 8,
-                              fontSize: 11,
-                              fontWeight: 600,
-                              border: "none",
-                              cursor: "pointer",
-                              width: "auto",
-                            }}
-                          >
-                            NEW ✕
-                          </button>
-                        ) : (
-                          <button
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              void toggleMessageRead(m.id, true);
-                            }}
-                            title="Mark as new"
-                            style={{
-                              background: "transparent",
-                              color: "var(--muted)",
-                              padding: "1px 6px",
-                              borderRadius: 8,
-                              fontSize: 11,
-                              border: "1px solid var(--border)",
-                              cursor: "pointer",
-                              width: "auto",
-                            }}
-                          >
-                            mark unread
-                          </button>
-                        )}
+                        <div
+                          className="muted"
+                          style={{
+                            fontSize: 12,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <span>
+                            {m.isFromUs ? "US" : m.fromName ?? m.fromEmail} ·{" "}
+                            {new Date(m.receivedAt).toLocaleString()}
+                          </span>
+                          {m.isNew ? (
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                void toggleMessageRead(m.id, false);
+                              }}
+                              title="Mark as read"
+                              style={{
+                                background: "#0969da",
+                                color: "white",
+                                padding: "1px 6px",
+                                borderRadius: 8,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                border: "none",
+                                cursor: "pointer",
+                                width: "auto",
+                              }}
+                            >
+                              NEW ✕
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                void toggleMessageRead(m.id, true);
+                              }}
+                              title="Mark as new"
+                              style={{
+                                background: "transparent",
+                                color: "var(--muted)",
+                                padding: "1px 6px",
+                                borderRadius: 8,
+                                fontSize: 11,
+                                border: "1px solid var(--border)",
+                                cursor: "pointer",
+                                width: "auto",
+                              }}
+                            >
+                              mark unread
+                            </button>
+                          )}
+                          {link && (
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                void openMessageInOutlook(m);
+                              }}
+                              title="Open in Outlook web"
+                              style={{
+                                background: "transparent",
+                                color: "var(--accent)",
+                                padding: "1px 6px",
+                                borderRadius: 8,
+                                fontSize: 11,
+                                border: "1px solid var(--accent)",
+                                cursor: "pointer",
+                                width: "auto",
+                              }}
+                            >
+                              open in Outlook ↗
+                            </button>
+                          )}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            marginTop: 4,
+                            cursor: link ? "pointer" : "default",
+                          }}
+                          onClick={() => {
+                            if (link) void openMessageInOutlook(m);
+                          }}
+                          title={link ? "Click to open in Outlook web" : ""}
+                        >
+                          {m.bodyPreview}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 13, marginTop: 4 }}>
-                        {m.bodyPreview}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
-          ))
+            );
+          })
         )}
       </div>
 

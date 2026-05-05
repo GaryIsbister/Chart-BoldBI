@@ -65,6 +65,8 @@ export const IPC_CHANNELS = {
   MESSAGES_MARK_ENTITY_READ: "messages:markEntityRead",
   MESSAGES_TOGGLE_READ: "messages:toggleRead",
   MESSAGES_NEW_COUNTS: "messages:newCounts",
+  MESSAGES_NEW_COUNTS_BY_THREAD: "messages:newCountsByThread",
+  SHELL_OPEN_EXTERNAL: "shell:openExternal",
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

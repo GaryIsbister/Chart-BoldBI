@@ -134,6 +134,11 @@ export const Investors = (): JSX.Element => {
     return m;
   }, [allActionItems]);
 
+  const markEntityRead = async (entityId: string): Promise<void> => {
+    await invoke(IPC_CHANNELS.MESSAGES_MARK_ENTITY_READ, entityId);
+    await refresh();
+  };
+
   useEffect(() => {
     void refresh();
   }, []);
@@ -646,7 +651,36 @@ export const Investors = (): JSX.Element => {
                       <td>{categoryLabel(e.category)}</td>
                       <td>{e.domain ?? "—"}</td>
                       <td>{e.pipelineStage}</td>
-                      <td style={unread > 0 ? redCell : zeroCell}>{unread}</td>
+                      <td style={unread > 0 ? redCell : zeroCell}>
+                        {unread > 0 ? (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            {unread}
+                            <button
+                              className="btn secondary"
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                void markEntityRead(e.id);
+                              }}
+                              style={{
+                                padding: "2px 6px",
+                                fontSize: 11,
+                                width: "auto",
+                              }}
+                              title={`Mark ${unread} message(s) read`}
+                            >
+                              ✓
+                            </button>
+                          </span>
+                        ) : (
+                          <span>0</span>
+                        )}
+                      </td>
                       <td style={openActions > 0 ? redCell : zeroCell}>
                         {openActions}
                       </td>

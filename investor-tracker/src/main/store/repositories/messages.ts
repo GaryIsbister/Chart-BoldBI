@@ -216,6 +216,22 @@ export const countNewMessagesPerEntity = (): Map<string, number> => {
   return map;
 };
 
+export const countNewMessagesByThread = (
+  entityId: string,
+): Map<string, number> => {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT thread_id, COUNT(*) AS cnt FROM messages
+       WHERE is_new = 1 AND entity_id = ? AND thread_id IS NOT NULL
+       GROUP BY thread_id`,
+    )
+    .all(entityId) as Array<{ thread_id: string; cnt: number }>;
+  const map = new Map<string, number>();
+  for (const r of rows) map.set(r.thread_id, r.cnt);
+  return map;
+};
+
 export const updateMessageEntity = (id: string, entityId: string | null): void => {
   const db = getDb();
   db.prepare("UPDATE messages SET entity_id = ? WHERE id = ?").run(entityId, id);

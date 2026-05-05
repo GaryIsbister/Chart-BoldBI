@@ -30,6 +30,7 @@ import {
 import { listContactsForEntity, upsertContact } from "../store/repositories/contacts";
 import {
   backfillMessagesByEmail,
+  countNewMessagesByThread,
   countNewMessagesPerEntity,
   findSendersByName,
   listMessagesForThread,
@@ -204,6 +205,16 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.MESSAGES_NEW_COUNTS, () => {
     const map = countNewMessagesPerEntity();
     return [...map.entries()].map(([entityId, count]) => ({ entityId, count }));
+  });
+  ipcMain.handle(IPC_CHANNELS.MESSAGES_NEW_COUNTS_BY_THREAD, (_e, entityId: string) => {
+    const map = countNewMessagesByThread(entityId);
+    return [...map.entries()].map(([threadId, count]) => ({ threadId, count }));
+  });
+  ipcMain.handle(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, async (_e, url: string) => {
+    if (!url) return false;
+    if (!/^https?:\/\//i.test(url)) return false;
+    await shell.openExternal(url);
+    return true;
   });
 
   ipcMain.handle(IPC_CHANNELS.THREADS_LIST_FOR_ENTITY, (_e, entityId: string) =>
