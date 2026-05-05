@@ -213,7 +213,28 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, async (_e, url: string) => {
     if (!url) return false;
     if (!/^https?:\/\//i.test(url)) return false;
-    await shell.openExternal(url);
+    let finalUrl = url;
+    try {
+      const parsed = new URL(url);
+      const isOutlook = /(^|\.)office\.com$|(^|\.)office365\.com$/i.test(
+        parsed.hostname,
+      );
+      if (isOutlook) {
+        const account = await getSignedInAccount();
+        if (account) {
+          if (!parsed.searchParams.has("login_hint")) {
+            parsed.searchParams.set("login_hint", account);
+          }
+          if (!parsed.searchParams.has("ispopout")) {
+            parsed.searchParams.set("ispopout", "0");
+          }
+          finalUrl = parsed.toString();
+        }
+      }
+    } catch {
+      // ignore URL parsing errors and use the original URL
+    }
+    await shell.openExternal(finalUrl);
     return true;
   });
 
