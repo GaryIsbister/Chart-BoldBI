@@ -168,6 +168,13 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_messages_is_new ON messages(is_new);
     `,
   },
+  {
+    version: 5,
+    name: "thread_last_analyzed",
+    sql: `
+      ALTER TABLE threads ADD COLUMN last_analyzed_at TEXT;
+    `,
+  },
 ];
 
 export const runMigrations = (db: Database.Database): void => {

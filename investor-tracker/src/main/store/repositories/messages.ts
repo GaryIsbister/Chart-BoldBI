@@ -27,6 +27,7 @@ interface ThreadRow {
   entity_id: string | null;
   subject: string | null;
   last_message_at: string;
+  last_analyzed_at: string | null;
   summary: string | null;
 }
 
@@ -55,8 +56,28 @@ const rowToThread = (row: ThreadRow): Thread => ({
   entityId: row.entity_id,
   subject: row.subject,
   lastMessageAt: row.last_message_at,
+  lastAnalyzedAt: row.last_analyzed_at,
   summary: row.summary,
 });
+
+export const getThreadLastAnalyzedAt = (threadId: string): string | null => {
+  const db = getDb();
+  const row = db
+    .prepare("SELECT last_analyzed_at FROM threads WHERE id = ?")
+    .get(threadId) as { last_analyzed_at: string | null } | undefined;
+  return row?.last_analyzed_at ?? null;
+};
+
+export const setThreadLastAnalyzedAt = (
+  threadId: string,
+  iso: string,
+): void => {
+  const db = getDb();
+  db.prepare("UPDATE threads SET last_analyzed_at = ? WHERE id = ?").run(
+    iso,
+    threadId,
+  );
+};
 
 export const findMessageByExternalId = (
   source: SourceKind,

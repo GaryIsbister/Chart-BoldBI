@@ -1,22 +1,48 @@
 import { getClaude } from "./client";
 import { getSettings } from "../store/repositories/settings";
-import { listMessagesForThread, updateThreadSummary } from "../store/repositories/messages";
-import { createActionItem, listOpenActionItemsForEntity, updateActionItemStatus } from "../store/repositories/actionItems";
+import {
+  getThreadLastAnalyzedAt,
+  listMessagesForThread,
+  setThreadLastAnalyzedAt,
+  updateThreadSummary,
+} from "../store/repositories/messages";
+import {
+  createActionItem,
+  listOpenActionItemsForEntity,
+  updateActionItemStatus,
+} from "../store/repositories/actionItems";
 import { updateEntityStage } from "../store/repositories/entities";
-import { PIPELINE_STAGES, type PipelineStage } from "@shared/types";
+import { nowIso } from "@shared/util";
+import { PIPELINE_STAGES, type Message, type PipelineStage } from "@shared/types";
 
 export interface ThreadAnalysis {
   summary: string;
   proposedStage: PipelineStage | null;
-  newActionItems: Array<{ ownerSide: "us" | "them"; description: string; dueDate: string | null }>;
+  newActionItems: Array<{
+    ownerSide: "us" | "them";
+    description: string;
+    dueDate: string | null;
+  }>;
   resolvedActionItemIds: string[];
+  hadNewMessages: boolean;
+  latestMessageId: string | null;
+  latestMessageReceivedAt: string | null;
 }
 
-const SYSTEM_PROMPT = `You synthesize a single investor thread into:
-- A concise (<=4 sentence) summary suitable for a CRM card.
-- The most appropriate pipeline stage from this set: ${PIPELINE_STAGES.join(", ")}.
-- A list of new action items implied by the latest messages, with owner ("us" or "them") and an optional ISO due date.
-- IDs of any previously-open action items (provided in input) that the latest messages clearly resolve.
+const SYSTEM_PROMPT = `You synthesize a single investor email thread.
+
+You will receive:
+- A list of currently open action items (with IDs).
+- (Optional) "Earlier thread context" — messages already processed in a previous run. DO NOT generate new action items from these. They are background only.
+- "New messages to analyze" — messages received since the last run. Generate new action items ONLY from these.
+
+Tasks:
+- Summarize the whole thread (use both old and new context) in <=4 sentences for a CRM card.
+- Pick the most appropriate pipeline stage based on the current state: ${PIPELINE_STAGES.join(", ")}.
+- Extract any new action items implied by the NEW messages, each with owner ("us" or "them") and an optional ISO due date. Do NOT repeat any existing open action items.
+- List IDs of existing open action items that the new messages clearly resolve.
+
+If there are no new messages, return empty new_action_items and resolved_action_item_ids; only the summary and proposed_stage may be updated.
 
 Output JSON only:
 {
@@ -32,26 +58,64 @@ const extractJson = (text: string): unknown => {
   return JSON.parse(match[0]);
 };
 
-export const analyzeThread = async (threadId: string, entityId: string): Promise<ThreadAnalysis> => {
+const renderMessage = (m: Message): string =>
+  `[${m.receivedAt}] ${m.isFromUs ? "US" : m.fromName ?? m.fromEmail}: ${m.subject ?? ""}\n${m.bodyPreview}`;
+
+export const analyzeThread = async (
+  threadId: string,
+  entityId: string,
+): Promise<ThreadAnalysis> => {
   const claude = await getClaude();
   const settings = getSettings();
-  const messages = listMessagesForThread(threadId);
+  const allMessages = listMessagesForThread(threadId);
   const openItems = listOpenActionItemsForEntity(entityId);
+  const lastAnalyzedAt = getThreadLastAnalyzedAt(threadId);
 
-  const userPrompt = [
+  const oldMessages = lastAnalyzedAt
+    ? allMessages.filter((m) => m.receivedAt <= lastAnalyzedAt)
+    : [];
+  const newMessages = lastAnalyzedAt
+    ? allMessages.filter((m) => m.receivedAt > lastAnalyzedAt)
+    : allMessages;
+
+  const latestMessage = allMessages[allMessages.length - 1] ?? null;
+
+  if (newMessages.length === 0) {
+    return {
+      summary: "",
+      proposedStage: null,
+      newActionItems: [],
+      resolvedActionItemIds: [],
+      hadNewMessages: false,
+      latestMessageId: latestMessage?.id ?? null,
+      latestMessageReceivedAt: latestMessage?.receivedAt ?? null,
+    };
+  }
+
+  const sections: string[] = [
     "Existing open action items:",
     openItems.length > 0
-      ? openItems.map((a) => `- [${a.id}] (${a.ownerSide}) ${a.description}`).join("\n")
+      ? openItems
+          .map((a) => `- [${a.id}] (${a.ownerSide}) ${a.description}`)
+          .join("\n")
       : "(none)",
     "",
-    "Thread messages (oldest first):",
-    messages
-      .map(
-        (m) =>
-          `[${m.receivedAt}] ${m.isFromUs ? "US" : m.fromName ?? m.fromEmail}: ${m.subject ?? ""}\n${m.bodyPreview}`,
-      )
-      .join("\n---\n"),
-  ].join("\n");
+  ];
+
+  if (oldMessages.length > 0) {
+    sections.push(
+      "Earlier thread context (DO NOT generate action items from these — background only):",
+      oldMessages.map(renderMessage).join("\n---\n"),
+      "",
+    );
+  }
+
+  sections.push(
+    "New messages to analyze (generate action items from these only):",
+    newMessages.map(renderMessage).join("\n---\n"),
+  );
+
+  const userPrompt = sections.join("\n");
 
   const response = await claude.messages.create({
     model: settings.synthesisModel,
@@ -66,16 +130,21 @@ export const analyzeThread = async (threadId: string, entityId: string): Promise
   const parsed = extractJson(textBlock.text) as {
     summary?: string;
     proposed_stage?: string | null;
-    new_action_items?: Array<{ owner?: string; description?: string; due_date?: string | null }>;
+    new_action_items?: Array<{
+      owner?: string;
+      description?: string;
+      due_date?: string | null;
+    }>;
     resolved_action_item_ids?: string[];
   };
 
   const proposedStage =
-    parsed.proposed_stage && (PIPELINE_STAGES as readonly string[]).includes(parsed.proposed_stage)
+    parsed.proposed_stage &&
+    (PIPELINE_STAGES as readonly string[]).includes(parsed.proposed_stage)
       ? (parsed.proposed_stage as PipelineStage)
       : null;
 
-  const analysis: ThreadAnalysis = {
+  return {
     summary: parsed.summary ?? "",
     proposedStage,
     newActionItems: (parsed.new_action_items ?? [])
@@ -86,9 +155,10 @@ export const analyzeThread = async (threadId: string, entityId: string): Promise
         dueDate: a.due_date ?? null,
       })),
     resolvedActionItemIds: parsed.resolved_action_item_ids ?? [],
+    hadNewMessages: true,
+    latestMessageId: latestMessage?.id ?? null,
+    latestMessageReceivedAt: latestMessage?.receivedAt ?? null,
   };
-
-  return analysis;
 };
 
 export const applyAnalysis = (
@@ -96,7 +166,9 @@ export const applyAnalysis = (
   entityId: string,
   analysis: ThreadAnalysis,
 ): void => {
-  updateThreadSummary(threadId, analysis.summary);
+  if (analysis.summary) {
+    updateThreadSummary(threadId, analysis.summary);
+  }
 
   if (analysis.proposedStage) {
     updateEntityStage({
@@ -107,14 +179,11 @@ export const applyAnalysis = (
     });
   }
 
-  const messages = listMessagesForThread(threadId);
-  const latestMessage = messages[messages.length - 1] ?? null;
-
   for (const item of analysis.newActionItems) {
     createActionItem({
       entityId,
       threadId,
-      sourceMessageId: latestMessage?.id ?? null,
+      sourceMessageId: analysis.latestMessageId,
       ownerSide: item.ownerSide,
       description: item.description,
       dueDate: item.dueDate ?? null,
@@ -123,4 +192,11 @@ export const applyAnalysis = (
   for (const id of analysis.resolvedActionItemIds) {
     updateActionItemStatus(id, "done", null);
   }
+
+  // Advance the analysis cursor: anything received up to the latest message
+  // we have is now "processed" and won't generate duplicate actions next run.
+  setThreadLastAnalyzedAt(
+    threadId,
+    analysis.latestMessageReceivedAt ?? nowIso(),
+  );
 };

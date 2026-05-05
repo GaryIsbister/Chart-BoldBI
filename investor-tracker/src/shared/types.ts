@@ -100,6 +100,7 @@ export const Thread = z.object({
   entityId: z.string().uuid().nullable(),
   subject: z.string().nullable(),
   lastMessageAt: z.string(),
+  lastAnalyzedAt: z.string().nullable().optional(),
   summary: z.string().nullable(),
 });
 export type Thread = z.infer<typeof Thread>;
